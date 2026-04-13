@@ -1,0 +1,170 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --lux-bg: #F1F5F9;
+    --lux-card: #FFFFFF;
+    --lux-border: #E2E8F0;
+    --lux-text: #0F172A;
+    --lux-muted: #475569;
+    --lux-gold: #C6A769;
+    --lux-glass: rgba(255, 255, 255, 0.8);
+    --font-display: 'Outfit', sans-serif;
+    --font-body: 'Inter', sans-serif;
+  }
+
+  :root.light {
+    --lux-bg: #F8FAFC;
+    --lux-card: #FFFFFF;
+    --lux-gold: #A6864A; /* Sharper gold for light background contrast */
+    --lux-border: #E2E8F0;
+    --lux-text: #0F172A;
+    --lux-muted: #475569; /* Darker muted text for better readability */
+    --lux-glass: rgba(0, 0, 0, 0.05);
+  }
+
+  body {
+    @apply bg-[var(--lux-bg)] text-[var(--lux-text)] transition-colors duration-500 selection:bg-[var(--lux-gold)] selection:text-black;
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display tracking-tight;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-md border border-white/10 shadow-xl;
+  }
+  
+  .lux-glow {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2), 0 0 15px rgba(198, 167, 105, 0.05);
+  }
+
+  .lux-glow-gold {
+    box-shadow: 0 0 20px rgba(198, 167, 105, 0.15);
+  }
+
+  /* --- NORMAL UTILITY STYLES --- */
+  .normal-card {
+    @apply bg-white border border-[var(--lux-border)] rounded-xl p-6 shadow-sm;
+  }
+
+  .normal-input {
+    @apply w-full h-10 px-4 bg-white border border-[var(--lux-border)] rounded-lg text-sm font-medium focus:border-[var(--lux-gold)] focus:ring-1 focus:ring-[rgba(198,167,105,0.2)] outline-none transition-all text-[var(--lux-text)];
+  }
+
+  .normal-input::placeholder {
+    color: rgba(100, 116, 139, 0.5);
+  }
+
+  .normal-label {
+    @apply block text-[11px] font-bold uppercase tracking-wider text-[var(--lux-muted)] mb-2;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .lux-glow-hover:hover {
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3), 0 0 20px rgba(198, 167, 105, 0.1);
+    @apply scale-[1.02] transition-all duration-300;
+  }
+
+  .lux-table {
+    @apply w-full text-left border-separate border-spacing-0;
+  }
+
+  .lux-table th {
+    @apply px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--lux-muted)] border-b border-[var(--lux-border)] sticky top-0 bg-[var(--lux-bg)] z-10;
+  }
+
+  .lux-table td {
+    @apply px-6 py-5 text-xs font-medium border-b border-[var(--lux-border)] transition-colors;
+  }
+
+  .lux-table tr:hover td {
+    @apply bg-[var(--lux-glass)];
+  }
+
+  .status-badge {
+    @apply px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest inline-flex items-center gap-2;
+  }
+
+  .status-badge.checked-in { @apply bg-green-500/10 text-green-500; }
+  .status-badge.upcoming { 
+    background-color: rgba(198, 167, 105, 0.1);
+    @apply text-[var(--lux-gold)]; 
+  }
+  .status-badge.cancelled { @apply bg-red-500/10 text-red-500; }
+  .status-badge.completed { @apply bg-blue-500/10 text-blue-500; }
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--lux-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--lux-border);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--lux-gold);
+}
+
+
+/* --- PRINT SYSTEM --- */
+@media print {
+  /* 1. Hide everything by default */
+  body * {
+    visibility: hidden;
+  }
+  
+  /* 2. Show only the print-content and its children */
+  .print-content, 
+  .print-content * {
+    visibility: visible;
+  }
+  
+  /* 3. Reset layout for the printed element */
+  .print-content {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+
+  /* 4. Improve page breaks */
+  .break-inside-avoid {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* 5. Hide browser headers/footers */
+  @page {
+    margin: 1cm;
+    size: auto;
+  }
+}
