@@ -26,7 +26,7 @@ const SIDEBAR_ITEMS = [
   { id: 'rooms', label: 'Rooms Management', icon: Bed },
 ];
 
-const Sidebar = ({ activeTab, setActiveTab, isOpen, setIsOpen }: { activeTab: string, setActiveTab: (id: string) => void, isOpen: boolean, setIsOpen: (o: boolean) => void }) => {
+const Sidebar = ({ activeTab, setActiveTab, isOpen, setIsOpen, onLogout }: { activeTab: string, setActiveTab: (id: string) => void, isOpen: boolean, setIsOpen: (o: boolean) => void, onLogout: () => void }) => {
   return (
     <>
       <AnimatePresence>
@@ -44,7 +44,7 @@ const Sidebar = ({ activeTab, setActiveTab, isOpen, setIsOpen }: { activeTab: st
            </div>
         </div>
 
-        <nav className="flex-1 space-y-2">
+        <nav className="flex-1 space-y-3">
           {SIDEBAR_ITEMS.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -57,31 +57,41 @@ const Sidebar = ({ activeTab, setActiveTab, isOpen, setIsOpen }: { activeTab: st
                 }}
                 className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition-all duration-300 group ${isActive ? 'bg-[var(--lux-gold)] text-black shadow-lg shadow-[var(--lux-gold)]/10' : 'text-[var(--lux-muted)] hover:bg-[var(--lux-bg)] hover:text-[var(--lux-text)]'}`}
               >
-                <Icon size={20} className={isActive ? 'text-black' : 'group-hover:text-[var(--lux-gold)] transition-colors'} />
-                <span className="text-[11px] font-black uppercase tracking-widest">{item.label}</span>
+                <Icon size={18} className={isActive ? 'text-black' : 'group-hover:text-[var(--lux-gold)] transition-colors'} />
+                <span className="text-[10px] font-bold uppercase tracking-widest">{item.label}</span>
                 {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-black"></div>}
               </button>
             );
           })}
         </nav>
 
-        <div className="mt-auto p-6 bg-white/[0.02] border border-white/[0.05] rounded-[2rem] relative overflow-hidden group cursor-pointer hover:border-[var(--lux-gold)]/20 transition-all">
-           <div className="absolute top-0 right-0 w-20 h-20 bg-[var(--lux-gold)]/5 rounded-full -mr-10 -mt-10 blur-2xl"></div>
-           <div className="flex items-center gap-4 relative z-10">
-              <div className="w-10 h-10 rounded-full bg-[var(--lux-gold)]/10 border border-[var(--lux-gold)]/20 flex items-center justify-center text-[var(--lux-gold)] font-bold">A</div>
-              <div>
-                 <p className="text-[10px] font-bold uppercase tracking-tight">Admin Profile</p>
-                 <p className="text-[8px] font-black uppercase text-[var(--lux-muted)] tracking-widest leading-none">Premium Plan</p>
-              </div>
-              <div className="ml-auto w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]"></div>
-           </div>
+        <div className="mt-auto space-y-4">
+          <button 
+            onClick={onLogout}
+            className="w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-red-500/60 hover:text-red-500 hover:bg-red-500/5 transition-all group"
+          >
+            <LogOut size={18} className="group-hover:rotate-12 transition-transform" />
+            <span className="text-[10px] font-bold uppercase tracking-widest">Terminate Session</span>
+          </button>
+
+          <div className="p-6 bg-white/[0.02] border border-white/[0.05] rounded-[2.5rem] relative overflow-hidden group cursor-pointer hover:border-[var(--lux-gold)]/20 transition-all">
+             <div className="absolute top-0 right-0 w-20 h-20 bg-[var(--lux-gold)]/5 rounded-full -mr-10 -mt-10 blur-2xl"></div>
+             <div className="flex items-center gap-4 relative z-10">
+                <div className="w-10 h-10 rounded-full bg-[var(--lux-gold)]/10 border border-[var(--lux-gold)]/20 flex items-center justify-center text-[var(--lux-gold)] font-bold">A</div>
+                <div>
+                   <p className="text-[10px] font-bold uppercase tracking-tight">Admin Profile</p>
+                   <p className="text-[8px] font-black uppercase text-[var(--lux-muted)] tracking-widest leading-none">Premium Plan</p>
+                </div>
+                <div className="ml-auto w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]"></div>
+             </div>
+          </div>
         </div>
       </aside>
     </>
   );
 };
 
-const Header = ({ theme, setTheme, onMenuClick, bookedCount = 12, arrivalsCount = 5 }: { theme: string, setTheme: (t: string) => void, onMenuClick: () => void, bookedCount?: number, arrivalsCount?: number }) => {
+const Header = ({ theme, setTheme, onMenuClick, hotelName, bookedCount = 12, arrivalsCount = 5 }: { theme: string, setTheme: (t: string) => void, onMenuClick: () => void, hotelName: string, bookedCount?: number, arrivalsCount?: number }) => {
   return (
     <header className="sticky top-0 z-40 h-[70px] flex items-center justify-between px-3 md:px-8 bg-[var(--lux-bg)]/80 backdrop-blur-xl border-b border-[var(--lux-border)]">
       <div className="flex items-center gap-2 md:gap-4">
@@ -102,7 +112,9 @@ const Header = ({ theme, setTheme, onMenuClick, bookedCount = 12, arrivalsCount 
            <div className="hidden lg:flex items-center gap-3 text-[var(--lux-muted)] text-[10px] font-black uppercase tracking-[0.3em]">
             <span className="hover:text-[var(--lux-gold)] transition-colors cursor-pointer">Home</span>
             <ChevronRight size={12} className="opacity-20" />
-            <span className="text-[var(--lux-gold)] shadow-[0_0_10px_rgba(212,175,55,0.2)]">Console</span>
+            <span className="hover:text-[var(--lux-gold)] transition-colors cursor-pointer">Console</span>
+            <ChevronRight size={12} className="opacity-20" />
+            <span className="text-[var(--lux-gold)] shadow-[0_0_10px_rgba(212,175,55,0.2)]">{hotelName}</span>
           </div>
         </div>
       </div>
@@ -280,7 +292,7 @@ const BookingActionsMenu = ({ booking, onAction, onViewDetails, onEdit, onDownlo
     try {
       const res = await fetch(`${API_BASE_URL}/api/content/bookings/admin/${booking._id}/${action}`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('hotel_token')}` }
       });
       if (res.ok) {
         toast.success(`${action.replace('-', ' ').toUpperCase()} SUCCESSFUL`);
@@ -350,22 +362,82 @@ const BookingActionsMenu = ({ booking, onAction, onViewDetails, onEdit, onDownlo
 
 // --- COMPONENTS ---
 
-const LoginPage = ({ onLogin }: { onLogin: () => void }) => {
+const HotelSelectionPage = ({ onSelect }: { onSelect: (id: string, name: string) => void }) => {
+  const { data: hotels = [], isLoading } = useHotelsList();
+
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center font-display text-[var(--lux-gold)] animate-pulse">Loading Enterprises...</div>;
+
+  return (
+    <div className="min-h-screen p-8 bg-[var(--lux-bg)] relative overflow-hidden">
+      <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_-20%,var(--lux-gold),transparent_40%)] opacity-10 blur-3xl pointer-events-none"></div>
+      <div className="max-w-6xl mx-auto relative z-10">
+        <div className="text-center mb-16">
+          <h1 className="text-6xl font-display font-bold mb-4 tracking-tight text-[var(--lux-text)]">Bhagat <span className="text-[var(--lux-gold)] italic">Group</span></h1>
+          <p className="text-[var(--lux-muted)] text-[11px] font-black uppercase tracking-[0.5em]">Enterprise Selection Console</p>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {hotels.map((hotel: any) => (
+            <motion.div 
+              key={hotel.id}
+              whileHover={{ scale: 1.02, translateY: -5 }}
+              onClick={() => onSelect(hotel.id, hotel.name)}
+              className="bg-[var(--lux-card)] border border-[var(--lux-border)] rounded-3xl overflow-hidden cursor-pointer group shadow-2xl hover:border-[var(--lux-gold)]/50 transition-all lux-glow"
+            >
+              <div className="h-48 bg-black relative overflow-hidden">
+                {hotel.image ? (
+                  <img src={hotel.image} alt={hotel.name} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-500 group-hover:scale-105" />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center border-b border-[var(--lux-border)] opacity-30">
+                    <Hotel size={40} className="text-white mb-2" />
+                  </div>
+                )}
+                <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 text-[9px] font-black uppercase tracking-widest text-[var(--lux-gold)]">
+                  {hotel.location}
+                </div>
+              </div>
+              <div className="p-8 bg-[var(--lux-card)]">
+                <h3 className="text-2xl font-bold mb-2 text-[var(--lux-text)] group-hover:text-[var(--lux-gold)] transition-colors line-clamp-1">{hotel.name}</h3>
+                <p className="text-[10px] uppercase font-black tracking-widest text-slate-500 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]"></span> 
+                  <span className="group-hover:text-slate-900 transition-colors">Online</span>
+                </p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const LoginPage = ({ hotelName, hotelId, onBack, onLogin }: { hotelName: string, hotelId: string, onBack: () => void, onLogin: (token: string) => void }) => {
+  const [username, setUsername] = useState(hotelId);
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
-      if (password === 'admin123') {
-        onLogin();
-        toast.success("Identity Verified. Welcome to Console Bhagat.");
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: username, password })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('hotel_token', data.token);
+        onLogin(data.token);
+        toast.success(`Identity Verified for ${hotelName}`);
       } else {
-        toast.error("Invalid access code");
+        throw new Error(data.message || 'Invalid credentials');
       }
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -376,29 +448,42 @@ const LoginPage = ({ onLogin }: { onLogin: () => void }) => {
         animate={{ opacity: 1, scale: 1 }}
         className="w-full max-w-md bg-[var(--lux-card)] border border-[var(--lux-border)] rounded-[3rem] p-12 shadow-2xl relative z-10 lux-glow"
       >
-        <div className="w-24 h-24 bg-[var(--lux-gold)]/5 rounded-[2rem] flex items-center justify-center mx-auto mb-10 border border-[var(--lux-gold)]/10">
-          <ShieldCheck size={48} className="text-[var(--lux-gold)]" />
+        <button onClick={onBack} className="absolute top-8 left-8 text-[var(--lux-muted)] hover:text-[var(--lux-text)] transition-colors">
+           <ArrowRight size={20} className="rotate-180" />
+        </button>
+        <div className="text-center mb-10 pt-4">
+          <div className="w-20 h-20 bg-[var(--lux-gold)]/5 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-[var(--lux-gold)]/20 shadow-inner">
+            <Hotel size={32} className="text-[var(--lux-gold)]" />
+          </div>
+          <h1 className="text-3xl font-display font-bold mb-2 tracking-tight text-[var(--lux-text)]">{hotelName}</h1>
+          <p className="text-[var(--lux-muted)] text-[9px] font-black uppercase tracking-[0.3em]">SECURE LOGIN</p>
         </div>
-        <div className="text-center mb-12">
-          <h1 className="text-5xl font-display font-bold mb-3 tracking-tight">Console <span className="text-[var(--lux-gold)]">Bhagat</span></h1>
-          <p className="text-[var(--lux-muted)] text-[10px] font-black uppercase tracking-[0.4em]">AUTHENTICATION REQUIRED</p>
-        </div>
-        <form onSubmit={handleLogin} className="space-y-8">
+        <form onSubmit={handleLogin} className="space-y-6">
           <div className="space-y-3">
-            <label className="text-[10px] font-black uppercase tracking-widest text-[var(--lux-muted)] ml-4">Access Code</label>
+            <label className="text-[9px] font-black uppercase tracking-widest text-[var(--lux-muted)] ml-2">Hotel ID</label>
+            <input 
+              type="text" 
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter ID"
+              className="w-full bg-[var(--lux-bg)] border border-[var(--lux-border)] p-4 rounded-2xl outline-none focus:border-[var(--lux-gold)] transition-all text-center text-lg font-bold text-[var(--lux-text)] shadow-inner"
+            />
+          </div>
+          <div className="space-y-3 pb-2">
+            <label className="text-[9px] font-black uppercase tracking-widest text-[var(--lux-muted)] ml-2">Access Code</label>
             <input 
               type="password" 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full bg-[var(--lux-bg)] border border-[var(--lux-border)] p-6 rounded-2xl outline-none focus:border-[var(--lux-gold)]/50 transition-all text-center text-3xl tracking-[0.6em] text-[var(--lux-gold)] shadow-inner"
+              className="w-full bg-[var(--lux-bg)] border border-[var(--lux-border)] p-4 rounded-2xl outline-none focus:border-[var(--lux-gold)] transition-all text-center text-xl tracking-[0.4em] text-[var(--lux-gold)] shadow-inner font-bold"
             />
           </div>
           <button 
-            disabled={loading}
-            className="w-full bg-[var(--lux-gold)] text-black font-bold py-6 rounded-2xl flex items-center justify-center gap-3 hover:bg-[var(--lux-gold)] hover:scale-[1.02] transition-all transform active:scale-95 disabled:opacity-50 shadow-xl shadow-[var(--lux-gold)]/20"
+            disabled={loading || !password || !username}
+            className="w-full bg-[var(--lux-gold)] text-black font-bold py-5 rounded-2xl flex items-center justify-center gap-3 hover:scale-[1.02] transition-all active:scale-95 disabled:opacity-50 shadow-xl shadow-[var(--lux-gold)]/20"
           >
-            {loading ? <Loader2 className="animate-spin" /> : <><LogIn size={20} /> AUTHORIZE ACCESS</>}
+            {loading ? <Loader2 className="animate-spin" size={18} /> : <><LogIn size={18} /> AUTHORIZE</>}
           </button>
         </form>
       </motion.div>
@@ -563,7 +648,7 @@ const BookingDetailsDrawer = ({ booking, isOpen, onClose }: { booking: any, isOp
                   <div>
                     <h4 className="text-lg font-bold">{booking.guestDetails?.name}</h4>
                     <p className="text-xs text-[var(--lux-muted)] font-medium">{booking.guestDetails?.phone}</p>
-                    <p className="text-[10px] text-[var(--lux-muted)] mt-1">{booking.guestDetails?.email || 'No email provided'}</p>
+                    <p className="text-[10px] text-[var(--lux-gold)] font-bold mt-1 uppercase tracking-widest">{booking.guestDetails?.email || 'OFFICIAL EMAIL REQUIRED'}</p>
                   </div>
                 </div>
               </div>
@@ -619,13 +704,21 @@ const BookingDetailsDrawer = ({ booking, isOpen, onClose }: { booking: any, isOp
                   <span className="text-[10px] uppercase font-black text-[var(--lux-muted)]">Total Amount</span>
                   <span className="text-lg font-bold">₹{booking.totalAmount}</span>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-[10px]">
-                    <span className="text-[var(--lux-muted)]">Paid Amount</span>
+                <div className="space-y-3">
+                  <div className="flex justify-between text-[10px] items-center">
+                    <span className="text-[var(--lux-muted)] uppercase font-black">Paid Offline (Cash/UPI)</span>
+                    <span className="text-white font-bold">₹{booking.offlinePaid || 0}</span>
+                  </div>
+                  <div className="flex justify-between text-[10px] items-center">
+                    <span className="text-[var(--lux-muted)] uppercase font-black">Paid Online (Bank)</span>
+                    <span className="text-white font-bold">₹{booking.onlinePaid || 0}</span>
+                  </div>
+                  <div className="pt-2 border-t border-white/5 flex justify-between text-[10px] items-center">
+                    <span className="text-[var(--lux-muted)] font-black uppercase">Total Paid</span>
                     <span className="text-green-500 font-bold">₹{booking.paidAmount}</span>
                   </div>
-                  <div className="flex justify-between text-[10px]">
-                    <span className="text-[var(--lux-muted)]">Balance Due</span>
+                  <div className="flex justify-between text-[10px] items-center">
+                    <span className="text-[var(--lux-muted)] font-black uppercase">Balance Due</span>
                     <span className="text-red-500 font-bold">₹{booking.balanceAmount}</span>
                   </div>
                 </div>
@@ -696,7 +789,15 @@ const InvoiceView = ({ booking, hotel }: { booking: any, hotel: any }) => {
              </tr>
           </tbody>
           <tfoot className="border-t-2 border-black">
-             <tr className="text-xl font-bold">
+             <tr className="text-[10px] font-black uppercase text-gray-500">
+                <td className="pt-6">Offline Payment</td>
+                <td className="pt-6 text-right">₹{booking.offlinePaid || 0}</td>
+             </tr>
+             <tr className="text-[10px] font-black uppercase text-gray-500">
+                <td className="pb-6">Online Payment</td>
+                <td className="pb-6 text-right">₹{booking.onlinePaid || 0}</td>
+             </tr>
+             <tr className="text-xl font-bold border-t border-black/10">
                 <td className="py-6">Grand Total</td>
                 <td className="py-6 text-right font-display text-4xl">₹{total.toFixed(0)}</td>
              </tr>
@@ -900,8 +1001,32 @@ const GlobalDashboard = ({ activeHotelId, onHotelChange }: { activeHotelId: stri
   const [selectedRoom, setSelectedRoom] = useState<any>(null);
   const [guestName, setGuestName] = useState('');
   const [guestMobile, setGuestMobile] = useState('');
+  const [guestEmail, setGuestEmail] = useState('');
+  const [offlineAmount, setOfflineAmount] = useState<string>('');
+  const [sidebarCheckIn, setSidebarCheckIn] = useState(new Date().toISOString().split('T')[0]);
+  const [sidebarCheckOut, setSidebarCheckOut] = useState(new Date(Date.now() + 86400000).toISOString().split('T')[0]);
+  const [onlineAmount, setOnlineAmount] = useState<string>('');
+  const [paymentMethod, setPaymentMethod] = useState<string>('Cash');
+  const [showInvoice, setShowInvoice] = useState<any>(null);
+  const [showEditDrawer, setShowEditDrawer] = useState(false);
+  const [showAssignmentList, setShowAssignmentList] = useState(false);
+  const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false);
 
   const hotels = useMemo(() => allHotels.filter((h: any) => h.id && h.rooms?.length > 0), [allHotels]);
+
+  useEffect(() => {
+    if (selectedRoom?.status === 'Booked' && selectedRoom.guestDetails) {
+      setGuestName(selectedRoom.guestDetails.name || "");
+      setGuestMobile(selectedRoom.guestDetails.phone || "");
+      setGuestEmail(selectedRoom.guestDetails.email || "");
+    } else {
+      setGuestName("");
+      setGuestMobile("");
+      setGuestEmail("");
+      setOfflineAmount("");
+      setOnlineAmount("");
+    }
+  }, [selectedRoom]);
 
   useEffect(() => {
     if (hotels.length > 0 && !activeHotelId) onHotelChange(hotels[0].id);
@@ -909,6 +1034,20 @@ const GlobalDashboard = ({ activeHotelId, onHotelChange }: { activeHotelId: stri
 
   const activeHotel = useMemo(() => hotels.find((h: any) => h.id === activeHotelId), [hotels, activeHotelId]);
   const { data: physicalStatuses = [] } = useRoomStatus(activeHotelId);
+
+  const { data: allBookings = [], refetch: refetchAll } = useQuery({
+    queryKey: ['admin-bookings-all', activeHotelId],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE_URL}/api/content/bookings/admin/all`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('hotel_token')}` }
+      });
+      const data = await res.json();
+      return data.filter((b: any) => b.hotel_id === activeHotelId);
+    },
+    enabled: !!activeHotelId
+  });
+
+  const unassignedBookings = useMemo(() => allBookings.filter((b: any) => !b.roomNumber && b.status !== 'completed'), [allBookings]);
 
   const { data: activeBookings = [] } = useActiveBookings(activeHotelId);
   const { data: availabilityMap = { allUnavailable: [] } } = useRoomAvailabilityMap(activeHotelId, new Date().toISOString().split('T')[0], new Date(Date.now() + 86400000).toISOString().split('T')[0]);
@@ -931,7 +1070,14 @@ const GlobalDashboard = ({ activeHotelId, onHotelChange }: { activeHotelId: stri
           else if (manualStatus?.status === 'Cleaning') status = 'Cleaning';
           else if (isOccupied) status = 'Booked';
 
-          generated.push({ number: num, type: roomType.type, price: roomType.price, roomId: roomType.id, status });
+          generated.push({ 
+            number: num, 
+            type: roomType.type, 
+            price: roomType.price, 
+            roomId: roomType.id, 
+            status,
+            booking: currentBooking
+          });
         });
       } else {
         // Fallback: Generate sequential numbers based on total_rooms (e.g., 101, 102...)
@@ -949,7 +1095,14 @@ const GlobalDashboard = ({ activeHotelId, onHotelChange }: { activeHotelId: stri
           else if (manualStatus?.status === 'Cleaning') status = 'Cleaning';
           else if (isOccupied) status = 'Booked';
 
-          generated.push({ number: num, type: roomType.type, price: roomType.price, roomId: roomType.id, status });
+          generated.push({ 
+            number: num, 
+            type: roomType.type, 
+            price: roomType.price, 
+            roomId: roomType.id, 
+            status,
+            booking: currentBooking
+          });
         }
       }
     });
@@ -979,12 +1132,14 @@ const GlobalDashboard = ({ activeHotelId, onHotelChange }: { activeHotelId: stri
     if (!selectedRoom || !guestName || !guestMobile) return;
     
     const toastId = toast.loading('Processing rapid check-in...');
+    const totalPaid = (Number(offlineAmount) || 0) + (Number(onlineAmount) || 0);
+    
     try {
       const res = await fetch(`${API_BASE_URL}/api/content/bookings/walk-in`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          guestDetails: { name: guestName, phone: guestMobile, email: '', guests: 1 },
+          guestDetails: { name: guestName, phone: guestMobile, email: guestEmail, guests: 1 },
           stayDetails: {
             hotel_id: activeHotelId,
             room_id: selectedRoom.roomId || activeHotel.rooms.find((r: any) => r.type === selectedRoom.type)?.id,
@@ -995,9 +1150,11 @@ const GlobalDashboard = ({ activeHotelId, onHotelChange }: { activeHotelId: stri
           },
           paymentDetails: {
             totalAmount: selectedRoom.price,
-            paidAmount: 0,
-            paymentMethod: 'Cash',
-            paymentStatus: 'Pending'
+            paidAmount: totalPaid,
+            offlinePaid: Number(offlineAmount) || 0,
+            onlinePaid: Number(onlineAmount) || 0,
+            paymentMethod: paymentMethod,
+            paymentStatus: totalPaid >= selectedRoom.price ? 'paid' : (totalPaid > 0 ? 'partial' : 'pending')
           }
         })
       });
@@ -1009,6 +1166,8 @@ const GlobalDashboard = ({ activeHotelId, onHotelChange }: { activeHotelId: stri
         setSelectedRoom(null);
         queryClient.invalidateQueries({ queryKey: ['room-status', activeHotelId] });
         queryClient.invalidateQueries({ queryKey: ['global-bookings'] });
+        queryClient.invalidateQueries({ queryKey: ['availability'] });
+        queryClient.invalidateQueries({ queryKey: ['active-bookings'] });
       } else {
         const data = await res.json();
         throw new Error(data.message || 'Check-in failed');
@@ -1018,23 +1177,31 @@ const GlobalDashboard = ({ activeHotelId, onHotelChange }: { activeHotelId: stri
     }
   };
 
+  const handleForceCheckout = async () => {
+    if (!selectedRoom?.booking?._id) return;
+    const tid = toast.loading("Executing Force Check-out...");
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/content/bookings/admin/${selectedRoom.booking._id}/checkout`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('hotel_token')}` }
+      });
+      if (res.ok) {
+        toast.success(`Room ${selectedRoom.number} checked out successfully`, { id: tid });
+        setShowCheckoutConfirm(false);
+        setSelectedRoom(null);
+        refetchAll();
+        queryClient.invalidateQueries({ queryKey: ['active-bookings'] });
+        queryClient.invalidateQueries({ queryKey: ['global-bookings'] });
+        queryClient.invalidateQueries({ queryKey: ['availability'] });
+        queryClient.invalidateQueries({ queryKey: ['room-status'] });
+      } else throw new Error("Check-out failed");
+    } catch (err: any) { toast.error(err.message, { id: tid }); }
+  };
+
   if (loadingHotels) return <div className="h-[60vh] flex items-center justify-center text-[var(--lux-gold)] animate-pulse font-display text-2xl uppercase tracking-[0.2em]">Restoring Enterprise Assets...</div>;
 
   return (
     <div className="space-y-8 pb-20">
-      {/* 1. HOTEL SELECTOR TABS */}
-      <div className="flex items-center gap-2 p-2 bg-[var(--lux-card)] rounded-2xl border border-[var(--lux-border)] overflow-x-auto no-scrollbar">
-         {hotels.map((h: any) => (
-           <button 
-             key={h.id}
-             onClick={() => onHotelChange(h.id)}
-             className={`px-8 py-3.5 rounded-xl transition-all duration-500 text-[11px] font-black uppercase tracking-widest whitespace-nowrap ${activeHotelId === h.id ? 'bg-[var(--lux-gold)] text-black shadow-lg shadow-[var(--lux-gold)]/20' : 'text-[var(--lux-muted)] hover:bg-[var(--lux-bg)] hover:text-[var(--lux-text)]'}`}
-           >
-             {h.name}
-           </button>
-         ))}
-      </div>
-
       <div className="flex flex-col xl:flex-row gap-8 items-start">
         {/* LEFT COLUMN: ROOM GRID & CONTROLS */}
         <div className="flex-1 w-full space-y-8">
@@ -1106,26 +1273,34 @@ const GlobalDashboard = ({ activeHotelId, onHotelChange }: { activeHotelId: stri
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setSelectedRoom(room)}
                     className={`p-6 rounded-3xl border transition-all cursor-pointer relative overflow-hidden group ${
-                      isActive ? 'bg-[var(--lux-gold)]/10 border-[var(--lux-gold)] shadow-[0_10px_30px_rgba(212,175,55,0.1)]' : 'bg-[var(--lux-card)] border-[var(--lux-border)] hover:border-white/20 shadow-lg'
+                      isActive 
+                        ? 'border-[var(--lux-gold)] shadow-[0_10px_30px_rgba(212,175,55,0.2)] ring-2 ring-[var(--lux-gold)]/50' 
+                        : 'border-[var(--lux-border)] hover:border-white/20 shadow-lg'
+                    } ${
+                      room.status === 'Booked' ? 'bg-red-500 text-white' :
+                      room.status === 'Cleaning' ? 'bg-yellow-500 text-black' :
+                      room.status === 'Maintenance' ? 'bg-orange-500 text-white' :
+                      'bg-[var(--lux-card)]'
                     }`}
                   >
-                    <div className={`absolute top-4 right-4 w-2 h-2 rounded-full ${
+                    <div className={`absolute top-4 right-4 w-2 h-2 rounded-full border border-white/20 ${
                       room.status === 'Available' ? 'bg-green-500' :
-                      room.status === 'Booked' ? 'bg-red-500' :
-                      room.status === 'Cleaning' ? 'bg-yellow-500' : 'bg-orange-500'
+                      room.status === 'Booked' ? 'bg-white' :
+                      room.status === 'Cleaning' ? 'bg-black' : 'bg-white'
                     }`}></div>
                     
                     <div className="flex flex-col items-center text-center space-y-4">
                        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center border transition-all ${
-                         room.status === 'Booked' ? 'bg-red-500/10 border-red-500/20 text-red-500' : 
+                         room.status === 'Booked' ? 'bg-white/20 border-white/40 text-white' : 
                          room.status === 'Available' ? 'bg-white/5 border-white/5 text-[var(--lux-muted)]' :
-                         'bg-yellow-500/10 border-yellow-500/20 text-yellow-500'
+                         room.status === 'Cleaning' ? 'bg-black/10 border-black/20 text-black' :
+                         'bg-white/20 border-white/40 text-white'
                        }`}>
                           <Key size={24} />
                        </div>
                        <div>
                           <h4 className="text-2xl font-display font-bold leading-none mb-1 tracking-tight">{room.number}</h4>
-                          <p className={`text-[8px] font-black uppercase tracking-widest opacity-60`}>{room.type}</p>
+                          <p className={`text-[8px] font-black uppercase tracking-widest ${room.status === 'Available' ? 'opacity-60' : 'opacity-80'}`}>{room.type}</p>
                        </div>
                     </div>
                   </motion.div>
@@ -1140,7 +1315,9 @@ const GlobalDashboard = ({ activeHotelId, onHotelChange }: { activeHotelId: stri
               <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--lux-gold)]/5 rounded-full -mr-16 -mt-16 blur-3xl"></div>
               
               <div className="relative z-10">
-                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--lux-muted)] mb-2">Guest Assignment</p>
+                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--lux-muted)] mb-2">
+                    {selectedRoom?.status === 'Booked' ? 'Guest Details' : 'Guest Assignment'}
+                 </p>
                  <h2 className="text-5xl font-display font-bold tracking-tight">Room <span className="text-[var(--lux-gold)] shadow-[0_0_15px_rgba(212,175,55,0.2)]">{selectedRoom?.number || '---'}</span></h2>
               </div>
 
@@ -1152,53 +1329,322 @@ const GlobalDashboard = ({ activeHotelId, onHotelChange }: { activeHotelId: stri
               </div>
 
               <div className="space-y-6">
-                 <div className="space-y-2">
-                    <label className="flex items-center gap-2 text-[8px] font-black uppercase tracking-widest text-[var(--lux-muted)] ml-2">
-                       <Users size={10} /> Name
-                    </label>
-                    <input 
-                      type="text" 
-                      placeholder="Guest Name" 
-                      value={guestName}
-                      onChange={(e) => setGuestName(e.target.value)}
-                      className="w-full bg-[var(--lux-bg)] border border-[var(--lux-border)] rounded-2xl py-4 px-6 text-[11px] font-bold outline-none focus:border-[var(--lux-gold)] transition-all shadow-inner" 
-                    />
-                 </div>
-                 <div className="space-y-2">
-                    <label className="flex items-center gap-2 text-[8px] font-black uppercase tracking-widest text-[var(--lux-muted)] ml-2">
-                       <Smartphone size={10} /> Mobile
-                    </label>
-                    <input 
-                      type="text" 
-                      placeholder="9998XXXXXX" 
-                      value={guestMobile}
-                      onChange={(e) => setGuestMobile(e.target.value)}
-                      className="w-full bg-[var(--lux-bg)] border border-[var(--lux-border)] rounded-2xl py-4 px-6 text-[11px] font-bold outline-none focus:border-[var(--lux-gold)] transition-all shadow-inner" 
-                    />
-                 </div>
-              </div>
+                 {selectedRoom?.status === 'Booked' && selectedRoom.booking ? (
+                   <>
+                     {/* BOOKED VIEW DETAILS */}
+                     <div className="space-y-4">
+                       <div className="flex justify-between items-center bg-[var(--lux-bg)] p-4 rounded-2xl border border-[var(--lux-border)]">
+                         <div className="space-y-1">
+                           <p className="text-[8px] font-black uppercase text-[var(--lux-muted)]">Guest Name</p>
+                           <p className="text-sm font-bold">{selectedRoom.booking.guestDetails?.name}</p>
+                         </div>
+                         <div className="text-right space-y-1">
+                           <p className="text-[8px] font-black uppercase text-[var(--lux-muted)]">Member Since</p>
+                           <p className="text-[10px] font-bold">New Member</p>
+                         </div>
+                       </div>
 
-              <div className="pt-4 grid grid-cols-2 gap-4">
-                 <div className="space-y-2">
-                    <label className="text-[8px] font-black uppercase text-[var(--lux-muted)] ml-2">Check-in</label>
-                    <div className="w-full bg-[var(--lux-bg)] h-12 rounded-xl border border-[var(--lux-border)] flex items-center px-4 text-[10px] font-bold opacity-40">Today</div>
-                 </div>
-                 <div className="space-y-2">
-                    <label className="text-[8px] font-black uppercase text-[var(--lux-muted)] ml-2">Check-out</label>
-                    <div className="w-full bg-[var(--lux-bg)] h-12 rounded-xl border border-[var(--lux-border)] flex items-center px-4 text-[10px] font-bold opacity-40">Tomorrow</div>
-                 </div>
-              </div>
+                       <div className="grid grid-cols-2 gap-3">
+                         <div className="bg-[var(--lux-bg)] p-4 rounded-2xl border border-[var(--lux-border)]">
+                            <p className="text-[8px] font-black uppercase text-[var(--lux-muted)] mb-1">Phone</p>
+                            <p className="text-[10px] font-bold">{selectedRoom.booking.guestDetails?.phone || 'N/A'}</p>
+                         </div>
+                         <div className="bg-[var(--lux-bg)] p-4 rounded-2xl border border-[var(--lux-border)]">
+                            <p className="text-[8px] font-black uppercase text-[var(--lux-muted)] mb-1">Email</p>
+                            <p className="text-[10px] font-bold truncate">{selectedRoom.booking.guestDetails?.email || 'N/A'}</p>
+                         </div>
+                       </div>
 
-              <button 
-                onClick={handleQuickCheckIn}
-                disabled={!selectedRoom || !guestName || !guestMobile}
-                className={`w-full py-5 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-xl ${
-                  selectedRoom && guestName && guestMobile ? 'bg-[var(--lux-gold)] text-black shadow-[var(--lux-gold)]/20 hover:scale-[1.02]' : 'bg-[var(--lux-glass)] text-[var(--lux-muted)] cursor-not-allowed'
-                }`}
-              >
-                 <CheckCircle size={18} />
-                 <span>Confirm Check-in</span>
-              </button>
+                       <div className="p-5 bg-black/5 rounded-[2rem] border border-[var(--lux-border)] space-y-4">
+                         <div className="flex justify-between text-[8px] font-black uppercase tracking-widest opacity-40">
+                           <span>Payment Summary</span>
+                           <span>Status: {selectedRoom.booking.paymentStatus}</span>
+                         </div>
+                         <div className="space-y-2">
+                           <div className="flex justify-between items-center text-xs">
+                             <span className="opacity-60">Total Amount</span>
+                             <span className="font-bold">₹{selectedRoom.booking.totalAmount}</span>
+                           </div>
+                           <div className="flex justify-between items-center text-xs">
+                             <span className="opacity-60">Paid Amount</span>
+                             <span className="font-bold text-green-500">₹{selectedRoom.booking.paidAmount}</span>
+                           </div>
+                           <div className="h-px bg-black opacity-5" />
+                           <div className="flex justify-between items-center">
+                             <span className="text-[10px] font-black uppercase tracking-widest text-[var(--lux-muted)]">Remaining</span>
+                             <span className={`text-lg font-display font-bold ${selectedRoom.booking.balanceAmount > 0 ? 'text-red-500' : 'text-green-500'}`}>
+                               ₹{selectedRoom.booking.balanceAmount}
+                             </span>
+                           </div>
+                         </div>
+                       </div>
+
+                       <div className="grid grid-cols-2 gap-4">
+                         <div className="space-y-1">
+                           <p className="text-[8px] font-black uppercase text-[var(--lux-muted)] ml-2">Check-in</p>
+                           <div className="bg-[var(--lux-bg)] p-3 rounded-xl border border-[var(--lux-border)] text-center font-bold text-[10px]">
+                             {new Date(selectedRoom.booking.checkin).toLocaleDateString()}
+                           </div>
+                         </div>
+                         <div className="space-y-1">
+                           <p className="text-[8px] font-black uppercase text-[var(--lux-muted)] ml-2">Check-out</p>
+                           <div className="bg-[var(--lux-bg)] p-3 rounded-xl border border-[var(--lux-border)] text-center font-bold text-[10px]">
+                             {new Date(selectedRoom.booking.checkout).toLocaleDateString()}
+                           </div>
+                         </div>
+                       </div>
+                       
+                        <div className="pt-2 grid grid-cols-2 gap-3">
+                         {selectedRoom.booking.balanceAmount <= 0 && (
+                           <button 
+                             onClick={() => setShowInvoice(selectedRoom.booking)}
+                             className="py-4 bg-black text-white rounded-2xl text-[9px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all flex items-center justify-center gap-2 shadow-xl"
+                           >
+                              <FileText size={14} /> Invoice
+                           </button>
+                         )}
+                         <button 
+                           onClick={() => setShowEditDrawer(true)}
+                           className={`py-4 bg-[var(--lux-gold)] text-black rounded-2xl text-[9px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all flex items-center justify-center gap-2 shadow-xl ${selectedRoom.booking.balanceAmount > 0 ? 'col-span-2' : ''}`}
+                         >
+                            <Edit size={14} /> Edit Records
+                         </button>
+                       </div>
+
+                       <button 
+                         onClick={() => setShowCheckoutConfirm(true)}
+                         className="w-full py-4 bg-red-500/10 border border-red-500/20 text-red-500 rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-2"
+                       >
+                          <LogOut size={14} /> Force Check-out
+                       </button>
+
+                       {selectedRoom.booking.balanceAmount > 0 && (
+                         <div className="p-4 bg-red-500/5 rounded-2xl border border-red-500/20 text-center">
+                           <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest">Pending Payment Required</p>
+                         </div>
+                       )}
+                     </div>
+                   </>
+                 ) : (
+                   <>
+                     {/* CHECK-IN FORM (Old View) */}
+                     <div className="space-y-6">
+                        <div className="flex items-center justify-between mb-2">
+                           <p className="text-[10px] font-black uppercase text-[var(--lux-muted)]">Quick Operations</p>
+                           <button 
+                             onClick={() => setShowAssignmentList(!showAssignmentList)}
+                             className="text-[9px] font-black uppercase text-[var(--lux-gold)] hover:underline"
+                           >
+                              {showAssignmentList ? "Cancel Assignment" : "Assign Existing Room"}
+                           </button>
+                        </div>
+
+                        {showAssignmentList ? (
+                           <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                              <p className="text-[8px] font-black uppercase text-[var(--lux-muted)] opacity-50">Select Booking to Assign</p>
+                              {unassignedBookings.length === 0 ? (
+                                <div className="p-10 border-2 border-dashed border-[var(--lux-border)] rounded-2xl text-center opacity-30 text-[9px] font-black uppercase">No Unassigned Bookings</div>
+                              ) : unassignedBookings.map((b: any) => (
+                                <button 
+                                  key={b._id}
+                                  onClick={async () => {
+                                    const tid = toast.loading("Assigning guest to room...");
+                                    try {
+                                      const res = await fetch(`${API_BASE_URL}/api/content/bookings/admin/${b._id}`, {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('hotel_token')}` },
+                                        body: JSON.stringify({ stayDetails: { roomNumber: selectedRoom.number } })
+                                      });
+                                      if (res.ok) {
+                                        toast.success(`Assigned ${b.guestDetails.name} to Room ${selectedRoom.number}`, { id: tid });
+                                        setShowAssignmentList(false);
+                                        refetchAll();
+                                        queryClient.invalidateQueries({ queryKey: ['active-bookings'] });
+                                      } else throw new Error("Assignment failed");
+                                    } catch (err: any) { toast.error(err.message, { id: tid }); }
+                                  }}
+                                  className="w-full text-left p-4 bg-[var(--lux-bg)] border border-[var(--lux-border)] rounded-xl hover:border-[var(--lux-gold)] transition-all group"
+                                >
+                                   <p className="text-[10px] font-bold group-hover:text-[var(--lux-gold)] transition-colors">{b.guestDetails.name}</p>
+                                   <div className="flex justify-between items-center opacity-60 text-[8px] font-black uppercase mt-1">
+                                      <span>{b.guestDetails.phone}</span>
+                                      <span>{b.room_id || b.roomType || 'Standard'}</span>
+                                   </div>
+                                </button>
+                              ))}
+                           </div>
+                        ) : (
+                           <>
+                             <div className="space-y-2">
+                                <label className="flex items-center gap-2 text-[8px] font-black uppercase tracking-widest text-[var(--lux-muted)] ml-2">
+                                   <Users size={10} /> Name
+                                </label>
+                                <input 
+                                  type="text" 
+                                  placeholder="Guest Name" 
+                                  value={guestName}
+                                  onChange={(e) => setGuestName(e.target.value)}
+                                  className="w-full bg-[var(--lux-bg)] border border-[var(--lux-border)] rounded-2xl py-4 px-6 text-[11px] font-bold outline-none focus:border-[var(--lux-gold)] transition-all shadow-inner" 
+                                />
+                             </div>
+                             <div className="space-y-2">
+                                <label className="flex items-center gap-2 text-[8px] font-black uppercase tracking-widest text-[var(--lux-muted)] ml-2">
+                                   <Smartphone size={10} /> Mobile
+                                </label>
+                                <input 
+                                  type="text" 
+                                  placeholder="9998XXXXXX" 
+                                  value={guestMobile}
+                                  onChange={(e) => setGuestMobile(e.target.value)}
+                                  className="w-full bg-[var(--lux-bg)] border border-[var(--lux-border)] rounded-2xl py-4 px-6 text-[11px] font-bold outline-none focus:border-[var(--lux-gold)] transition-all shadow-inner" 
+                                />
+                             </div>
+                             <div className="space-y-2">
+                                <label className="flex items-center gap-2 text-[8px] font-black uppercase tracking-widest text-[var(--lux-muted)] ml-2">
+                                   <Mail size={10} /> Email Address *
+                                </label>
+                                <input 
+                                  type="email" 
+                                  required
+                                  placeholder="guest@example.com"
+                                  value={guestEmail}
+                                  onChange={(e) => setGuestEmail(e.target.value)}
+                                  className="w-full bg-[var(--lux-bg)] border border-[var(--lux-border)] rounded-2xl py-4 px-6 text-[11px] font-bold outline-none focus:border-[var(--lux-gold)] transition-all shadow-inner" 
+                                />
+                             </div>
+
+                             <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                   <label className="text-[8px] font-black uppercase tracking-widest text-[var(--lux-muted)] ml-2">Amount Paid (₹)</label>
+                                   <input 
+                                     type="number" 
+                                     placeholder={selectedRoom?.price?.toString() || "0"}
+                                     value={offlineAmount}
+                                     onChange={(e) => setOfflineAmount(e.target.value)}
+                                     className="w-full bg-[var(--lux-bg)] border border-[var(--lux-border)] rounded-2xl py-4 px-6 text-[11px] font-bold outline-none focus:border-[var(--lux-gold)] transition-all shadow-inner" 
+                                   />
+                                </div>
+                                <div className="space-y-2">
+                                   <label className="text-[8px] font-black uppercase tracking-widest text-[var(--lux-muted)] ml-2">Online Paid (₹)</label>
+                                    <input 
+                                      type="number" 
+                                      value={onlineAmount}
+                                      onChange={(e) => setOnlineAmount(e.target.value)}
+                                      className="w-full bg-[var(--lux-bg)] border border-[var(--lux-border)] rounded-2xl py-4 px-6 text-[11px] font-bold outline-none focus:border-[var(--lux-gold)] transition-all shadow-inner" 
+                                    />
+                                </div>
+                             </div>
+
+                             <div className="pt-4 grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                      <label className="text-[8px] font-black uppercase text-[var(--lux-muted)] ml-2">Check-in</label>
+                                      <input 
+                                        type="date"
+                                        value={sidebarCheckIn}
+                                        onChange={(e) => setSidebarCheckIn(e.target.value)}
+                                        className="w-full bg-[var(--lux-bg)] h-12 rounded-xl border border-[var(--lux-border)] flex items-center px-4 text-[10px] font-bold outline-none focus:border-[var(--lux-gold)] transition-all"
+                                      />
+                                  </div>
+                                  <div className="space-y-2">
+                                      <label className="text-[8px] font-black uppercase text-[var(--lux-muted)] ml-2">Check-out</label>
+                                      <input 
+                                        type="date"
+                                        value={sidebarCheckOut}
+                                        onChange={(e) => setSidebarCheckOut(e.target.value)}
+                                        className="w-full bg-[var(--lux-bg)] h-12 rounded-xl border border-[var(--lux-border)] flex items-center px-4 text-[10px] font-bold outline-none focus:border-[var(--lux-gold)] transition-all"
+                                      />
+                                  </div>
+                             </div>
+
+                             <button 
+                               onClick={handleQuickCheckIn}
+                               disabled={!selectedRoom || !guestName || !guestMobile}
+                               className={`w-full py-5 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-xl ${
+                                 selectedRoom && guestName && guestMobile ? 'bg-[var(--lux-gold)] text-black shadow-[var(--lux-gold)]/20 hover:scale-[1.02]' : 'bg-[var(--lux-glass)] text-[var(--lux-muted)] cursor-not-allowed'
+                               }`}
+                             >
+                                <CheckCircle size={18} />
+                                <span>Confirm Check-in</span>
+                             </button>
+                           </>
+                        )}
+                     </div>
+                   </>
+                 )}
+              </div>
+              
+              <EditBookingDrawer 
+                booking={selectedRoom?.booking} 
+                isOpen={showEditDrawer} 
+                onClose={() => setShowEditDrawer(false)} 
+                onUpdate={() => {
+                  setShowEditDrawer(false);
+                  refetchAll();
+                  queryClient.invalidateQueries({ queryKey: ['active-bookings'] });
+                }}
+              />
+              
+              {showInvoice && (
+                <div className="fixed inset-0 z-[500] bg-white text-black overflow-y-auto p-10 print:p-0 print-content">
+                   <div className="max-w-4xl mx-auto relative pt-10">
+                      <button 
+                        onClick={() => setShowInvoice(null)} 
+                        className="fixed top-6 right-6 p-4 bg-black text-white rounded-xl font-bold uppercase text-[10px] tracking-widest hover:scale-110 transition-all z-[501] print:hidden"
+                      >
+                        Close Preview
+                      </button>
+                      <InvoiceView booking={showInvoice} hotel={activeHotel} />
+                      <div className="mt-8 flex justify-center print:hidden pb-20">
+                         <button 
+                           onClick={() => window.print()} 
+                           className="bg-[var(--lux-gold)] text-black font-bold py-4 px-10 rounded-2xl shadow-xl shadow-[var(--lux-gold)]/20 hover:scale-105 transition-all text-sm uppercase tracking-widest"
+                         >
+                           Download PDF / Print
+                         </button>
+                      </div>
+                   </div>
+                </div>
+              )}
+
+              <AnimatePresence>
+                {showCheckoutConfirm && (
+                   <div className="fixed inset-0 z-[600] flex items-center justify-center p-6">
+                      <motion.div 
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        onClick={() => setShowCheckoutConfirm(false)}
+                        className="absolute inset-0 bg-black/80 backdrop-blur-sm" 
+                      />
+                      <motion.div 
+                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                        className="relative bg-[var(--lux-card)] border border-[var(--lux-border)] p-8 rounded-[2.5rem] max-w-sm w-full shadow-2xl text-center space-y-6"
+                      >
+                         <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto border border-red-500/20">
+                            <span className="text-4xl">⚠️</span>
+                         </div>
+                         <div className="space-y-2">
+                            <h3 className="text-2xl font-display font-bold">Force Check-out?</h3>
+                            <p className="text-[11px] text-[var(--lux-muted)] font-medium leading-relaxed">You are about to permanently check out room {selectedRoom?.number}. This action cannot be undone.</p>
+                         </div>
+                         <div className="flex flex-col gap-3">
+                            <button 
+                              onClick={handleForceCheckout}
+                              className="w-full py-4 bg-red-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all shadow-xl shadow-red-500/20"
+                            >
+                               Yes, Check-out
+                            </button>
+                            <button 
+                              onClick={() => setShowCheckoutConfirm(false)}
+                              className="w-full py-4 bg-[var(--lux-bg)] text-[var(--lux-muted)] rounded-2xl text-[10px] font-black uppercase tracking-widest hover:text-white transition-all"
+                            >
+                               Cancel
+                            </button>
+                         </div>
+                      </motion.div>
+                   </div>
+                )}
+              </AnimatePresence>
            </div>
         </div>
       </div>
@@ -1233,7 +1679,8 @@ const ReceptionConsole = ({ activeHotelId, onHotelChange }: { activeHotelId: str
     roomNumber: '', roomType: '', hotelName: '',
     checkin: new Date().toISOString().split('T')[0],
     checkout: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-    totalAmount: 0, paidAmount: 0, paymentMethod: 'Cash', paymentStatus: 'Paid',
+    totalAmount: 0, paidAmount: 0, offlinePaid: 0, onlinePaid: 0, 
+    paymentMethod: 'Partial', paymentStatus: 'Paid',
     photo: '', aadharFront: '', aadharBack: '', otherDoc: ''
   });
 
@@ -1251,7 +1698,7 @@ const ReceptionConsole = ({ activeHotelId, onHotelChange }: { activeHotelId: str
     queryKey: ['unified-bookings', activeHotelId],
     queryFn: async () => {
       const res = await fetch(`${API_BASE_URL}/api/content/bookings/admin/all`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('hotel_token')}` }
       });
       const data = await res.json();
       return data.filter((b: any) => b.hotel_id === activeHotelId);
@@ -1325,7 +1772,9 @@ const ReceptionConsole = ({ activeHotelId, onHotelChange }: { activeHotelId: str
         },
         paymentDetails: {
           totalAmount: Number(formData.totalAmount) || 0,
-          paidAmount: Number(formData.paidAmount) || 0,
+          paidAmount: (Number(formData.offlinePaid) || 0) + (Number(formData.onlinePaid) || 0),
+          offlinePaid: Number(formData.offlinePaid) || 0,
+          onlinePaid: Number(formData.onlinePaid) || 0,
           paymentMethod: formData.paymentMethod,
           paymentStatus: formData.paymentStatus
         }
@@ -1391,7 +1840,7 @@ const ReceptionConsole = ({ activeHotelId, onHotelChange }: { activeHotelId: str
 
         if (room) {
            const total = (nights * room.price) + ((formData.guests > room.base_guests) ? (formData.guests - room.base_guests) * room.extra_guest_price : 0);
-           setFormData(prev => ({ ...prev, totalAmount: total, paidAmount: prev.paidAmount || total }));
+           setFormData(prev => ({ ...prev, totalAmount: total, offlinePaid: prev.offlinePaid || total, onlinePaid: 0 }));
         }
     }
   }, [formData.checkin, formData.checkout, formData.roomType, formData.guests, activeHotel, rooms]);
@@ -1414,15 +1863,6 @@ const ReceptionConsole = ({ activeHotelId, onHotelChange }: { activeHotelId: str
             </button>
           ))}
         </div>
-      </div>
-
-      {/* 2. ALL HOTELS FAST SWITCHER */}
-      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-2">
-         {allHotels.map((h: any) => (
-            <button key={h.id} onClick={() => onHotelChange(h.id)} className={`px-4 py-2 rounded-lg whitespace-nowrap text-[10px] font-black uppercase tracking-widest border transition-all ${activeHotelId === h.id ? 'bg-white border-[var(--lux-gold)] text-[var(--lux-gold)] shadow-sm' : 'bg-transparent border-transparent text-[var(--lux-muted)] hover:text-[var(--lux-text)]'}`}>
-               {h.name}
-            </button>
-         ))}
       </div>
 
       <AnimatePresence mode="wait">
@@ -1476,7 +1916,7 @@ const ReceptionConsole = ({ activeHotelId, onHotelChange }: { activeHotelId: str
                    <NormalInput label="Full Name" value={formData.name} onChange={v => setFormData({...formData, name: v})} required placeholder="John Doe" />
                    <NormalInput label="Phone Number" value={formData.phone} onChange={v => setFormData({...formData, phone: v})} required placeholder="+91..." />
                    <div className="md:col-span-2">
-                      <NormalInput label="Email Address" value={formData.email} onChange={v => setFormData({...formData, email: v})} placeholder="optional@gmail.com" />
+                      <NormalInput label="Email Address" value={formData.email} onChange={v => setFormData({...formData, email: v})} required placeholder="guest@example.com" />
                    </div>
                 </div>
 
@@ -1497,9 +1937,11 @@ const ReceptionConsole = ({ activeHotelId, onHotelChange }: { activeHotelId: str
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                    <div className="md:col-span-2 flex items-center gap-3 border-b pb-4 pt-4">
                       <CreditCard size={16} className="text-[var(--lux-gold)]" />
-                      <h4 className="text-[12px] font-black uppercase tracking-widest">Payment</h4>
+                      <h4 className="text-[12px] font-black uppercase tracking-widest">Payment Settlement</h4>
                    </div>
                    <NormalInput label="Total Amount" type="number" value={formData.totalAmount} onChange={v => setFormData({...formData, totalAmount: parseInt(v)})} />
+                    <NormalInput label="Offline Paid (₹)" type="number" value={formData.offlinePaid} onChange={v => setFormData({...formData, offlinePaid: parseInt(v)})} />
+                    <NormalInput label="Online Paid (₹)" type="number" value={formData.onlinePaid} onChange={v => setFormData({...formData, onlinePaid: parseInt(v)})} />
                    <NormalSelect label="Method" value={formData.paymentMethod} onChange={v => setFormData({...formData, paymentMethod: v})} options={['Cash', 'UPI', 'Card']} />
                 </div>
 
@@ -1545,9 +1987,8 @@ const ReceptionConsole = ({ activeHotelId, onHotelChange }: { activeHotelId: str
 };
 
 
-const BookingsManagement = () => {
+const BookingsManagement = ({ activeHotelId }: { activeHotelId: string }) => {
   const { data: hotels = [] } = useHotelsList();
-  const [activeHotelId, setActiveHotelId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
@@ -1561,21 +2002,23 @@ const BookingsManagement = () => {
   const [showExportMenu, setShowExportMenu] = useState(false);
 
   const { data: allBookings = [], isLoading, refetch } = useQuery({
-    queryKey: ['admin-bookings-all'],
+    queryKey: ['admin-bookings-all', activeHotelId],
     queryFn: async () => {
       const res = await fetch(`${API_BASE_URL}/api/content/bookings/admin/all`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('hotel_token')}` }
       });
       if (!res.ok) throw new Error('Failed to fetch bookings');
-      return res.json();
-    }
+      const data = await res.json();
+      return data.filter((b: any) => b.hotel_id === activeHotelId);
+    },
+    enabled: !!activeHotelId
   });
 
-  const activeHotel = hotels.find(h => h.id === activeHotelId) || hotels[0];
+  const activeHotel = hotels.find((h: any) => h.id === activeHotelId) || hotels[0];
 
   const filteredBookings = useMemo(() => {
     return allBookings.filter((b: any) => {
-      const matchesHotel = activeHotelId ? b.hotel_id === activeHotelId : true;
+      const matchesHotel = b.hotel_id === activeHotelId;
       const matchesStatus = statusFilter === 'All' || b.status.toLowerCase() === statusFilter.toLowerCase();
       const searchLower = searchQuery.toLowerCase();
       const matchesSearch = !searchQuery || 
@@ -1915,20 +2358,25 @@ const BookingsManagement = () => {
 };
 
 const AppContent = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(true);
+  const [authState, setAuthState] = useState<'selecting' | 'logging-in' | 'authenticated'>(
+    (localStorage.getItem('hotel_token') && localStorage.getItem('hotelId')) ? 'authenticated' : 'selecting'
+  );
   const [activeTab, setActiveTab] = useState('dashboard');
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [activeHotelId, setActiveHotelId] = useState<string>("");
+  const [activeHotelId, setActiveHotelId] = useState<string>(localStorage.getItem('hotelId') || "");
+  const [activeHotelName, setActiveHotelName] = useState<string>(localStorage.getItem('hotelName') || "");
 
   const { data: allBookings = [] } = useQuery({
-    queryKey: ['global-bookings'],
+    queryKey: ['global-bookings', activeHotelId],
     queryFn: async () => {
       const res = await fetch(`${API_BASE_URL}/api/content/bookings/admin/all`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('hotel_token')}` }
       });
-      return res.json();
+      const data = await res.json();
+      return data.filter((b: any) => b.hotel_id === activeHotelId);
     },
+    enabled: authState === 'authenticated' && !!activeHotelId,
     refetchInterval: 30000
   });
 
@@ -1945,9 +2393,34 @@ const AppContent = () => {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  if (!isLoggedIn) {
-    return <LoginPage onLogin={() => setIsLoggedIn(true)} />;
+  if (authState === 'selecting') {
+    return <HotelSelectionPage onSelect={(id, name) => { 
+      setActiveHotelId(id); 
+      setActiveHotelName(name); 
+      setAuthState('logging-in'); 
+    }} />;
   }
+
+  if (authState === 'logging-in') {
+    return <LoginPage 
+      hotelName={activeHotelName} 
+      hotelId={activeHotelId} 
+      onBack={() => setAuthState('selecting')} 
+      onLogin={(token) => {
+        localStorage.setItem('hotelId', activeHotelId);
+        localStorage.setItem('hotelName', activeHotelName);
+        setAuthState('authenticated');
+      }} 
+    />;
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('hotel_token');
+    localStorage.removeItem('hotelId');
+    localStorage.removeItem('hotelName');
+    setAuthState('selecting');
+    toast.success("Logged out successfully");
+  };
 
   return (
     <div className="flex min-h-screen bg-[var(--lux-bg)] transition-colors duration-500">
@@ -1956,6 +2429,7 @@ const AppContent = () => {
         setActiveTab={setActiveTab} 
         isOpen={isSidebarOpen} 
         setIsOpen={setIsSidebarOpen} 
+        onLogout={handleLogout}
       />
       
       <div className="flex-1 lg:ml-[280px] flex flex-col min-h-screen">
@@ -1963,6 +2437,7 @@ const AppContent = () => {
           theme={theme} 
           setTheme={setTheme} 
           onMenuClick={() => setIsSidebarOpen(true)} 
+          hotelName={activeHotelName}
           bookedCount={headerStats.booked}
           arrivalsCount={headerStats.arrivals}
         />
@@ -2002,7 +2477,7 @@ const AppContent = () => {
                   exit={{ opacity: 0, scale: 1.02 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <BookingsManagement />
+                  <BookingsManagement activeHotelId={activeHotelId} />
                 </motion.div>
               )}
               
@@ -2046,7 +2521,9 @@ const EditBookingDrawer = ({ booking, isOpen, onClose, onUpdate }: { booking: an
         checkout: new Date(booking.checkout).toISOString().split('T')[0],
         roomNumber: booking.roomNumber || '',
         totalAmount: booking.totalAmount || 0,
-        paidAmount: booking.paidAmount || 0
+        paidAmount: booking.paidAmount || 0,
+        offlinePaid: booking.offlinePaid || 0,
+        onlinePaid: booking.onlinePaid || 0
       });
     }
   }, [booking]);
@@ -2059,12 +2536,17 @@ const EditBookingDrawer = ({ booking, isOpen, onClose, onUpdate }: { booking: an
         method: 'PATCH',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('hotel_token')}`
         },
         body: JSON.stringify({
           guestDetails: { name: formData.name, phone: formData.phone, email: formData.email },
           stayDetails: { checkin: formData.checkin, checkout: formData.checkout, roomNumber: formData.roomNumber },
-          paymentDetails: { totalAmount: formData.totalAmount, paidAmount: formData.paidAmount }
+          paymentDetails: { 
+            totalAmount: formData.totalAmount, 
+            paidAmount: (Number(formData.offlinePaid) || 0) + (Number(formData.onlinePaid) || 0),
+            offlinePaid: Number(formData.offlinePaid) || 0,
+            onlinePaid: Number(formData.onlinePaid) || 0
+          }
         })
       });
       if (res.ok) {
@@ -2115,12 +2597,13 @@ const EditBookingDrawer = ({ booking, isOpen, onClose, onUpdate }: { booking: an
                    <p className="text-[8px] font-black uppercase tracking-widest text-[var(--lux-muted)]">Financial Records</p>
                    <div className="grid grid-cols-2 gap-4">
                       <NormalInput label="Total Amount (₹)" type="number" value={formData.totalAmount} onChange={(v: string) => setFormData({...formData, totalAmount: Number(v)})} required />
-                      <NormalInput label="Paid Amount (₹)" type="number" value={formData.paidAmount} onChange={(v: string) => setFormData({...formData, paidAmount: Number(v)})} required />
+                      <NormalInput label="Offline Paid (₹)" type="number" value={formData.offlinePaid} onChange={(v: string) => setFormData({...formData, offlinePaid: Number(v)})} required />
+                       <NormalInput label="Online Paid (₹)" type="number" value={formData.onlinePaid} onChange={(v: string) => setFormData({...formData, onlinePaid: Number(v)})} required />
                    </div>
                    <div className="p-4 bg-[var(--lux-bg)] rounded-xl border border-[var(--lux-border)]">
                       <div className="flex justify-between items-center">
                          <span className="text-[10px] font-bold uppercase text-[var(--lux-muted)]">Calculated Balance</span>
-                         <span className={`text-lg font-bold ${formData.totalAmount - formData.paidAmount > 0 ? 'text-red-500' : 'text-green-500'}`}>₹{formData.totalAmount - formData.paidAmount}</span>
+                         <span className={`text-lg font-bold ${formData.totalAmount - ((Number(formData.offlinePaid) || 0) + (Number(formData.onlinePaid) || 0)) > 0 ? 'text-red-500' : 'text-green-500'}`}>₹{formData.totalAmount - ((Number(formData.offlinePaid) || 0) + (Number(formData.onlinePaid) || 0))}</span>
                       </div>
                    </div>
                 </div>
