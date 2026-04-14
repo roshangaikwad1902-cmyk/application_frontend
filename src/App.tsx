@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -475,7 +475,7 @@ const LoginPage = ({ hotelName, hotelId, onBack, onLogin }: { hotelName: string,
               type="password" 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder="Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢"
               className="w-full bg-[var(--lux-bg)] border border-[var(--lux-border)] p-4 rounded-2xl outline-none focus:border-[var(--lux-gold)] transition-all text-center text-xl tracking-[0.4em] text-[var(--lux-gold)] shadow-inner font-bold"
             />
           </div>
@@ -615,8 +615,69 @@ const RoomDetailsDrawer = ({
   );
 };
 
-const BookingDetailsDrawer = ({ booking, isOpen, onClose }: { booking: any, isOpen: boolean, onClose: () => void }) => {
+const BookingDetailsDrawer = ({ booking, isOpen, onClose, onUpdate }: { booking: any, isOpen: boolean, onClose: () => void, onUpdate?: () => void }) => {
+  const [isAddingPayment, setIsAddingPayment] = useState(false);
+  const [addMode, setAddMode] = useState<'Cash' | 'UPI'>('Cash');
+  const [addAmount, setAddAmount] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   if (!booking) return null;
+  
+  const total = Number(booking.totalAmount || booking.total_amount) || 0;
+  const paid = Number(booking.paidAmount || booking.paid_amount) || 0;
+  const balance = Number(booking.balanceAmount ?? booking.balance_amount) ?? (total - paid);
+  const paidPercent = total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0;
+  
+  const nights = Math.max(1, Math.ceil((new Date(booking.checkout).getTime() - new Date(booking.checkin).getTime()) / (1000 * 60 * 60 * 24)));
+  
+  const paymentStatus = balance <= 0 ? 'PAID' : (paid > 0 ? 'PARTIAL' : 'UNPAID');
+  const statusColors = {
+    PAID: 'bg-green-500 text-white shadow-green-500/20',
+    PARTIAL: 'bg-yellow-500 text-black shadow-yellow-500/20',
+    UNPAID: 'bg-red-500 text-white shadow-red-500/20'
+  };
+
+  const isCheckoutToday = new Date(booking.checkout).toDateString() === new Date().toDateString();
+  const hasBalance = booking.balanceAmount > 0;
+
+  const handleAddPayment = async () => {
+    if (!addAmount || Number(addAmount) <= 0) return toast.error("Enter valid amount");
+    const amountNum = Number(addAmount);
+    if (amountNum > booking.balanceAmount) return toast.error(`Amount exceeds balance (Max: ₹${booking.balanceAmount})`);
+
+    setIsSubmitting(true);
+    const tid = toast.loading("Recording payment...");
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/content/bookings/admin/${booking._id}`, {
+        method: 'PATCH',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('hotel_token')}` 
+        },
+        body: JSON.stringify({
+          paymentUpdate: {
+            amount: amountNum,
+            mode: addMode
+          }
+        })
+      });
+
+      if (res.ok) {
+        toast.success("Payment recorded successfully", { id: tid });
+        setIsAddingPayment(false);
+        setAddAmount('');
+        if (onUpdate) onUpdate();
+      } else {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to update payment");
+      }
+    } catch (err: any) {
+      toast.error(err.message, { id: tid });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -628,109 +689,273 @@ const BookingDetailsDrawer = ({ booking, isOpen, onClose }: { booking: any, isOp
           />
           <motion.div 
             initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
-            className="fixed top-0 right-0 w-full max-w-md h-full bg-[var(--lux-card)] border-l border-[var(--lux-border)] z-[201] p-8 overflow-y-auto"
+            className="fixed top-0 right-0 w-full max-w-md h-full bg-[var(--lux-card)] border-l border-[var(--lux-border)] z-[201] p-8 overflow-y-auto custom-scrollbar"
           >
-            <div className="flex items-center justify-between mb-10">
-              <h2 className="text-3xl font-display font-bold">Booking <span className="text-[var(--lux-gold)]">Details</span></h2>
-              <button onClick={onClose} className="w-10 h-10 bg-[var(--lux-glass)] rounded-xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-8">
+              <div className="space-y-1">
+                <h2 className="text-3xl font-display font-bold">Booking <span className="text-[var(--lux-gold)]">Sheet</span></h2>
+                <div className="flex items-center gap-2">
+                   <div className={`px-2 py-1 rounded text-[7px] font-black uppercase tracking-widest ${statusColors[paymentStatus as keyof typeof statusColors]}`}>
+                      {paymentStatus}
+                   </div>
+                   <span className="text-[8px] font-bold text-[var(--lux-muted)] uppercase tracking-tight opacity-60">REF: {booking._id?.slice(-8).toUpperCase()}</span>
+                </div>
+              </div>
+              <button onClick={onClose} className="w-10 h-10 bg-[var(--lux-glass)] rounded-xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm border border-[var(--lux-border)]">
                 <ArrowRight size={18} />
               </button>
             </div>
 
-            <div className="space-y-8">
-              {/* Guest Segment */}
-              <div className="p-6 bg-[var(--lux-bg)] rounded-3xl border border-[var(--lux-border)]">
-                <p className="text-[8px] font-black uppercase tracking-widest text-[var(--lux-muted)] mb-4">Guest Information</p>
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-[var(--lux-gold)]/10 flex items-center justify-center text-[var(--lux-gold)] font-bold text-xl">
-                    {booking.guestDetails?.name?.[0]}
-                  </div>
-                  <div>
-                    <h4 className="text-lg font-bold">{booking.guestDetails?.name}</h4>
-                    <p className="text-xs text-[var(--lux-muted)] font-medium">{booking.guestDetails?.phone}</p>
-                    <p className="text-[10px] text-[var(--lux-gold)] font-bold mt-1 uppercase tracking-widest">{booking.guestDetails?.email || 'OFFICIAL EMAIL REQUIRED'}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* KYC Segment */}
-              {(booking.guestDetails?.photo || booking.guestDetails?.aadharFront) && (
-                <div className="p-6 bg-[var(--lux-card)] rounded-3xl border border-[var(--lux-border)] space-y-4">
-                  <p className="text-[8px] font-black uppercase tracking-widest text-[var(--lux-muted)] mb-2">Verified KYC Documents</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    {booking.guestDetails.photo && (
-                      <div className="space-y-1">
-                        <p className="text-[7px] font-black uppercase text-[var(--lux-muted)] ml-1">Guest Photo</p>
-                        <img src={booking.guestDetails.photo} alt="KYC" className="w-full h-24 object-cover rounded-xl border border-[var(--lux-border)] shadow-md" />
-                      </div>
-                    )}
-                    {booking.guestDetails.aadharFront && (
-                      <div className="space-y-1">
-                        <p className="text-[7px] font-black uppercase text-[var(--lux-muted)] ml-1">Aadhar Front</p>
-                        <img src={booking.guestDetails.aadharFront} alt="Aadhar" className="w-full h-24 object-cover rounded-xl border border-[var(--lux-border)] shadow-md" />
-                      </div>
-                    )}
-                    {booking.guestDetails.aadharBack && (
-                      <div className="space-y-1">
-                        <p className="text-[7px] font-black uppercase text-[var(--lux-muted)] ml-1">Aadhar Back</p>
-                        <img src={booking.guestDetails.aadharBack} alt="Aadhar Back" className="w-full h-24 object-cover rounded-xl border border-[var(--lux-border)] shadow-md" />
-                      </div>
-                    )}
-                    {booking.guestDetails.otherDoc && (
-                      <div className="space-y-1">
-                        <p className="text-[7px] font-black uppercase text-[var(--lux-muted)] ml-1">Other Doc</p>
-                        <img src={booking.guestDetails.otherDoc} alt="Document" className="w-full h-24 object-cover rounded-xl border border-[var(--lux-border)] shadow-md" />
-                      </div>
-                    )}
-                  </div>
-                </div>
+            <div className="space-y-6">
+              {/* Alert Segment */}
+              {isCheckoutToday && (
+                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-2xl flex items-center gap-3">
+                   <div className="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-500">
+                      <Clock size={16} />
+                   </div>
+                   <div>
+                      <p className="text-[9px] font-bold text-orange-500 uppercase tracking-widest">Check-out Today</p>
+                      <p className="text-[8px] text-orange-500/60 font-medium uppercase">Schedule by 11:00 AM</p>
+                   </div>
+                </motion.div>
               )}
 
-              {/* Stay Segment */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-5 bg-[var(--lux-glass)] rounded-2xl border border-[var(--lux-border)]">
-                  <p className="text-[8px] font-black uppercase text-[var(--lux-muted)] mb-1">Check-in</p>
-                  <p className="text-sm font-bold">{new Date(booking.checkin).toDateString()}</p>
+              {/* Guest Segment */}
+              <div className="p-6 bg-[var(--lux-bg)] rounded-3xl border border-[var(--lux-border)] relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                   <User size={60} />
                 </div>
-                <div className="p-5 bg-[var(--lux-glass)] rounded-2xl border border-[var(--lux-border)] text-right">
-                  <p className="text-[8px] font-black uppercase text-[var(--lux-muted)] mb-1">Check-out</p>
-                  <p className="text-sm font-bold">{new Date(booking.checkout).toDateString()}</p>
+                <div className="flex items-center justify-between mb-4">
+                   <p className="text-[8px] font-black uppercase tracking-widest text-[var(--lux-muted)]">Guest Profile</p>
+                   <div className={`px-2 py-0.5 rounded text-[7px] font-black uppercase tracking-widest ${booking.guestDetails?.photo ? 'bg-green-500/10 text-green-500' : 'bg-yellow-500/10 text-yellow-500'}`}>
+                      KYC: {booking.guestDetails?.photo ? 'Verified' : 'Pending'}
+                   </div>
+                </div>
+                <div className="flex items-center gap-4 relative z-10">
+                  <div className="w-16 h-16 rounded-2xl bg-[var(--lux-gold)]/10 flex items-center justify-center text-[var(--lux-gold)] font-bold text-2xl border border-[var(--lux-gold)]/20">
+                    {booking.guestDetails?.name?.[0]}
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-xl font-bold tracking-tight">{booking.guestDetails?.name}</h4>
+                    <p className="text-xs text-[var(--lux-muted)] font-bold">{booking.guestDetails?.phone}</p>
+                    <p className="text-[9px] text-[var(--lux-gold)] font-black mt-1 uppercase tracking-widest truncate max-w-[200px]">{booking.guestDetails?.email || 'N/A'}</p>
+                  </div>
+                  <button className="w-10 h-10 rounded-full bg-green-500/10 text-green-500 flex items-center justify-center hover:bg-green-500 hover:text-white transition-all shadow-sm">
+                     <Phone size={16} />
+                  </button>
                 </div>
               </div>
 
-              {/* Financial Segment */}
-              <div className="p-6 bg-white/5 rounded-3xl border border-white/10 space-y-4">
-                <div className="flex justify-between items-center pb-4 border-b border-white/5">
-                  <span className="text-[10px] uppercase font-black text-[var(--lux-muted)]">Total Amount</span>
-                  <span className="text-lg font-bold">₹{booking.totalAmount}</span>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex justify-between text-[10px] items-center">
-                    <span className="text-[var(--lux-muted)] uppercase font-black">Paid Offline (Cash/UPI)</span>
-                    <span className="text-white font-bold">₹{booking.offlinePaid || 0}</span>
-                  </div>
-                  <div className="flex justify-between text-[10px] items-center">
-                    <span className="text-[var(--lux-muted)] uppercase font-black">Paid Online (Bank)</span>
-                    <span className="text-white font-bold">₹{booking.onlinePaid || 0}</span>
-                  </div>
-                  <div className="pt-2 border-t border-white/5 flex justify-between text-[10px] items-center">
-                    <span className="text-[var(--lux-muted)] font-black uppercase">Total Paid</span>
-                    <span className="text-green-500 font-bold">₹{booking.paidAmount}</span>
-                  </div>
-                  <div className="flex justify-between text-[10px] items-center">
-                    <span className="text-[var(--lux-muted)] font-black uppercase">Balance Due</span>
-                    <span className="text-red-500 font-bold">₹{booking.balanceAmount}</span>
-                  </div>
-                </div>
-                <button className="w-full py-4 bg-[var(--lux-gold)] text-black rounded-xl font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-[var(--lux-gold)]/10">Settle Balance</button>
+              {/* Quick Actions Row */}
+              <div className="grid grid-cols-3 gap-3">
+                 <button className="flex flex-col items-center gap-2 p-3 bg-[var(--lux-card)] border border-[var(--lux-border)] rounded-2xl hover:border-[var(--lux-gold)] transition-all group">
+                    <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-all">
+                       <Smartphone size={16} />
+                    </div>
+                    <span className="text-[7px] font-black uppercase tracking-widest text-[var(--lux-muted)]">Message</span>
+                 </button>
+                 <button className="flex flex-col items-center gap-2 p-3 bg-[var(--lux-card)] border border-[var(--lux-border)] rounded-2xl hover:border-[var(--lux-gold)] transition-all group">
+                    <div className="w-8 h-8 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500 group-hover:bg-orange-500 group-hover:text-white transition-all">
+                       <Edit size={16} />
+                    </div>
+                    <span className="text-[7px] font-black uppercase tracking-widest text-[var(--lux-muted)]">Edit</span>
+                 </button>
+                 <button className="flex flex-col items-center gap-2 p-3 bg-[var(--lux-card)] border border-[var(--lux-border)] rounded-2xl hover:border-red-500 transition-all group">
+                    <div className="w-8 h-8 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 group-hover:bg-red-500 group-hover:text-white transition-all">
+                       <Trash2 size={16} />
+                    </div>
+                    <span className="text-[7px] font-black uppercase tracking-widest text-[var(--lux-muted)]">Cancel</span>
+                 </button>
               </div>
 
-              {/* Internal Info */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 px-4 py-3 bg-[var(--lux-bg)] rounded-xl border border-[var(--lux-border)]">
-                  <Info size={14} className="text-[var(--lux-gold)]" />
-                  <p className="text-[10px] font-bold text-[var(--lux-muted)] uppercase tracking-tight">Booking Ref: {booking._id}</p>
+              {/* Room & Stay Details */}
+              <div className="p-6 bg-[var(--lux-card)] rounded-[2rem] border border-[var(--lux-border)] space-y-5 shadow-sm">
+                 <div className="flex justify-between items-end">
+                    <div className="space-y-1">
+                       <p className="text-[8px] font-black uppercase text-[var(--lux-muted)]">Assigned Room</p>
+                       <p className="text-2xl font-display font-bold">Room <span className="text-[var(--lux-gold)]">{booking.roomNumber || '---'}</span></p>
+                    </div>
+                    <div className="text-right">
+                       <p className="text-[8px] font-black uppercase text-[var(--lux-muted)] mb-1">{booking.roomType || 'Classic'}</p>
+                       <p className="text-[10px] font-bold flex items-center gap-1.5 justify-end">
+                          <Users size={12} className="text-[var(--lux-gold)]" /> {booking.guests || 2} Adults
+                       </p>
+                    </div>
+                 </div>
+
+                 <div className="h-px bg-[var(--lux-border)] opacity-20" />
+
+                 <div className="grid grid-cols-2 gap-6 relative">
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-[var(--lux-bg)] border border-[var(--lux-border)] rounded-full flex items-center justify-center text-[8px] font-black uppercase text-[var(--lux-gold)] z-10 shadow-sm">
+                       {nights}N
+                    </div>
+                    <div className="space-y-1">
+                       <p className="text-[8px] font-black uppercase text-[var(--lux-muted)]">Check-in</p>
+                       <p className="text-[10px] font-bold">{new Date(booking.checkin).toDateString()}</p>
+                       <p className="text-[8px] font-black uppercase text-[var(--lux-gold)]">02:00 PM</p>
+                    </div>
+                    <div className="space-y-1 text-right">
+                       <p className="text-[8px] font-black uppercase text(--lux-muted)]">Check-out</p>
+                       <p className="text-[10px] font-bold">{new Date(booking.checkout).toDateString()}</p>
+                       <p className="text-[8px] font-black uppercase text-[var(--lux-gold)]">11:00 AM</p>
+                    </div>
+                 </div>
+              </div>
+
+              {/* Payment Section */}
+              <div className="p-6 bg-white/[0.03] rounded-[2.5rem] border border-white/10 space-y-6 relative overflow-hidden backdrop-blur-md shadow-inner">
+                <div className="flex justify-between items-center relative z-10">
+                  <div className="space-y-1">
+                     <p className="text-[8px] font-black uppercase text-[var(--lux-muted)]">Financial Overview</p>
+                     <h3 className="text-2xl font-display font-bold">Total: ₹{booking.totalAmount}</h3>
+                  </div>
+                  <div className="text-right">
+                     <p className={`text-[10px] font-black uppercase tracking-widest ${paymentStatus === 'PAID' ? 'text-green-500' : 'text-red-500'}`}>
+                        {paymentStatus === 'PAID' ? 'Fully Paid ✅' : `₹${booking.balanceAmount} Pending ⚠️Ã¯Â¸Â`}
+                     </p>
+                  </div>
                 </div>
+
+                {/* Progress Bar */}
+                <div className="space-y-2">
+                   <div className="flex justify-between text-[8px] font-black uppercase tracking-widest text-[var(--lux-muted)]">
+                      <span>Payment Progress</span>
+                      <span className={paidPercent === 100 ? 'text-green-500' : ''}>{paidPercent}%</span>
+                   </div>
+                   <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden p-0.5 border border-white/5">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${paidPercent}%` }}
+                        className={`h-full rounded-full ${paidPercent === 100 ? 'bg-green-500' : 'bg-[var(--lux-gold)]'} shadow-[0_0_15px_rgba(212,175,55,0.4)]`}
+                      />
+                   </div>
+                </div>
+
+                {/* Add Payment Form */}
+                <AnimatePresence>
+                  {isAddingPayment && (
+                    <motion.div 
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className="p-5 bg-white/5 border border-white/10 rounded-2xl space-y-4"
+                    >
+                       <div className="flex justify-between items-center">
+                          <p className="text-[8px] font-black uppercase text-[var(--lux-gold)]">Record New Payment</p>
+                          <button onClick={() => setIsAddingPayment(false)} className="text-[8px] font-black uppercase text-white/40 hover:text-white">Cancel</button>
+                       </div>
+                       <div className="grid grid-cols-2 gap-2">
+                          <button onClick={() => setAddMode('Cash')} className={`py-2 rounded-lg text-[8px] font-bold uppercase transition-all ${addMode === 'Cash' ? 'bg-[var(--lux-gold)] text-black' : 'bg-white/5 text-[var(--lux-muted)]'}`}>Cash</button>
+                          <button onClick={() => setAddMode('UPI')} className={`py-2 rounded-lg text-[8px] font-bold uppercase transition-all ${addMode === 'UPI' ? 'bg-[var(--lux-gold)] text-black' : 'bg-white/5 text-[var(--lux-muted)]'}`}>UPI / Bank</button>
+                       </div>
+                       <div className="relative">
+                          <input 
+                            type="number" 
+                            placeholder="Amount (₹)" 
+                            value={addAmount}
+                            onChange={(e) => setAddAmount(e.target.value)}
+                            className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-[10px] font-bold outline-none focus:border-[var(--lux-gold)] transition-all"
+                          />
+                          <button 
+                            onClick={handleAddPayment}
+                            disabled={isSubmitting}
+                            className="absolute right-2 top-1.5 bottom-1.5 px-4 bg-[var(--lux-gold)] text-black rounded-lg text-[7px] font-black uppercase tracking-widest hover:scale-105 transition-all disabled:opacity-50"
+                          >
+                             {isSubmitting ? '...' : 'Record'}
+                          </button>
+                       </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Breakdown */}
+                <div className="grid grid-cols-2 gap-4 py-4 border-y border-white/5">
+                   <div className="space-y-1">
+                      <p className="text-[8px] font-black uppercase text-[var(--lux-muted)]">Paid Online (Bank)</p>
+                      <p className="text-sm font-bold text-white">₹{booking.onlinePaid || 0}</p>
+                   </div>
+                   <div className="space-y-1 text-right">
+                      <p className="text-[8px] font-black uppercase text-[var(--lux-muted)]">Paid Cash (Offline)</p>
+                      <p className="text-sm font-bold text-white">₹{booking.offlinePaid || 0}</p>
+                   </div>
+                </div>
+
+                <div className="flex justify-between items-center pt-2">
+                   <div className="space-y-1">
+                      <p className="text-[8px] font-black uppercase text-[var(--lux-muted)]">Total Paid</p>
+                      <p className="text-lg font-bold text-green-500">₹{booking.paidAmount}</p>
+                   </div>
+                   <div className="space-y-1 text-right">
+                      <p className="text-[8px] font-black uppercase text-[var(--lux-muted)]">Balance Due</p>
+                      <p className={`text-lg font-bold ${paymentStatus === 'PAID' ? 'text-green-500' : 'text-red-500'}`}>₹{booking.balanceAmount}</p>
+                   </div>
+                </div>
+
+                {/* History Block */}
+                <div className="pt-2">
+                   <p className="text-[8px] font-black uppercase text-[var(--lux-muted)] mb-3 flex items-center gap-2">
+                      <TrendingUp size={12} /> Payment History
+                   </p>
+                   <div className="space-y-2">
+                      {booking.onlinePaid > 0 && (
+                        <div className="flex justify-between items-center text-[10px] p-2 bg-white/5 rounded-xl border border-white/5">
+                           <span className="font-bold opacity-60">UPI / Bank Transfer</span>
+                           <span className="font-bold text-green-500 font-sans">+ ₹{booking.onlinePaid}</span>
+                        </div>
+                      )}
+                      {booking.offlinePaid > 0 && (
+                        <div className="flex justify-between items-center text-[10px] p-2 bg-white/5 rounded-xl border border-white/5">
+                           <span className="font-bold opacity-60">Cash Payment Received</span>
+                           <span className="font-bold text-green-500 font-sans">+ ₹{booking.offlinePaid}</span>
+                        </div>
+                      )}
+                      {booking.paidAmount === 0 && (
+                        <p className="text-[10px] font-bold text-[var(--lux-muted)] opacity-30 italic text-center py-2">No payment transactions recorded</p>
+                      )}
+                   </div>
+                </div>
+              </div>
+
+              {/* Final Actions */}
+              <div className="space-y-4 pt-4 pb-10">
+                 {hasBalance && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3">
+                       <Info size={14} className="text-red-500" />
+                       <p className="text-[8px] font-bold text-red-500 uppercase tracking-widest leading-relaxed">
+                          ⚠️Ã¯Â¸Â Payment Pending. Please complete payment before checkout.
+                       </p>
+                    </motion.div>
+                 )}
+
+                 <div className="grid grid-cols-2 gap-3">
+                    <button 
+                      onClick={() => setIsAddingPayment(true)}
+                      className="py-4 bg-[var(--lux-glass)] border border-[var(--lux-border)] rounded-2xl text-[9px] font-black uppercase tracking-widest hover:border-[var(--lux-gold)] transition-all flex items-center justify-center gap-2 group"
+                    >
+                       <Plus size={14} className="group-hover:rotate-90 transition-transform" /> Add Payment
+                    </button>
+                    <button 
+                      disabled={hasBalance} 
+                      className={`py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl transition-all ${hasBalance ? 'bg-white/5 text-[var(--lux-muted)] cursor-not-allowed opacity-50' : 'bg-[var(--lux-gold)] text-black shadow-[var(--lux-gold)]/20 hover:scale-[1.02]'}`}
+                    >
+                       <ShieldCheck size={14} /> {hasBalance ? 'Settlement Required' : 'Settle & Checkout'}
+                    </button>
+                 </div>
+
+                 <div className="grid grid-cols-2 gap-3">
+                    <button className="py-4 bg-black text-white rounded-2xl text-[9px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all flex items-center justify-center gap-2 shadow-xl border border-white/10">
+                       <FileDown size={14} /> Download Invoice
+                    </button>
+                    <button className="py-4 bg-white text-black rounded-2xl text-[9px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all flex items-center justify-center gap-2 shadow-xl">
+                       <FileText size={14} /> Print Bill
+                    </button>
+                 </div>
+
+                 <div className="p-4 bg-[var(--lux-bg)] rounded-xl border border-[var(--lux-border)] flex items-center gap-3">
+                    <Info size={14} className="text-[var(--lux-gold)]" />
+                    <p className="text-[8px] font-bold text-[var(--lux-muted)] uppercase tracking-tight">Enterprise Booking ID: {booking._id}</p>
+                 </div>
               </div>
             </div>
           </motion.div>
@@ -837,7 +1062,7 @@ const BookingReportView = ({ bookings, title, hotel }: { bookings: any[], title:
                   <span className="w-12 h-12 bg-black text-white rounded-full flex items-center justify-center font-bold text-xl">{idx + 1}</span>
                   <div>
                     <h3 className="text-2xl font-bold leading-none">{b.guestDetails?.name}</h3>
-                    <p className="text-sm opacity-60">{b.guestDetails?.phone} • {b.guestDetails?.email || 'No Email'}</p>
+                    <p className="text-sm opacity-60">{b.guestDetails?.phone} Ã¢â‚¬Â¢ {b.guestDetails?.email || 'No Email'}</p>
                   </div>
                </div>
                <div className="text-right">
@@ -860,7 +1085,7 @@ const BookingReportView = ({ bookings, title, hotel }: { bookings: any[], title:
                     </thead>
                     <tbody>
                       <tr>
-                        <td className="py-4 font-bold">{b.roomNumber || 'TBD'} • {b.room_id?.slice(0, 8)}</td>
+                        <td className="py-4 font-bold">{b.roomNumber || 'TBD'} Ã¢â‚¬Â¢ {b.room_id?.slice(0, 8)}</td>
                         <td className="py-4 text-center">{new Date(b.checkin).toLocaleDateString()}</td>
                         <td className="py-4 text-center">{new Date(b.checkout).toLocaleDateString()}</td>
                         <td className="py-4 text-right font-bold">{b.guests || 1}</td>
@@ -1154,7 +1379,7 @@ const GlobalDashboard = ({ activeHotelId, onHotelChange }: { activeHotelId: stri
             offlinePaid: Number(offlineAmount) || 0,
             onlinePaid: Number(onlineAmount) || 0,
             paymentMethod: paymentMethod,
-            paymentStatus: totalPaid >= selectedRoom.price ? 'paid' : (totalPaid > 0 ? 'partial' : 'pending')
+            paymentStatus: paymentMethod === 'Pay Later' ? 'pending' : (totalPaid >= selectedRoom.price ? 'paid' : (totalPaid > 0 ? 'partial' : 'pending'))
           }
         })
       });
@@ -1325,106 +1550,155 @@ const GlobalDashboard = ({ activeHotelId, onHotelChange }: { activeHotelId: stri
                  <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center border border-white/5">
                     <LayoutGrid size={32} className="opacity-20" />
                  </div>
-                 <p className="text-[9px] font-black uppercase tracking-[0.2em]">{selectedRoom ? `${selectedRoom.type} • ₹${selectedRoom.price}` : 'Select an available room'}</p>
+                 <p className="text-[9px] font-black uppercase tracking-[0.2em]">{selectedRoom ? `${selectedRoom.type} Ã¢â‚¬Â¢ ₹${selectedRoom.price}` : 'Select an available room'}</p>
               </div>
 
               <div className="space-y-6">
-                 {selectedRoom?.status === 'Booked' && selectedRoom.booking ? (
-                   <>
-                     {/* BOOKED VIEW DETAILS */}
-                     <div className="space-y-4">
-                       <div className="flex justify-between items-center bg-[var(--lux-bg)] p-4 rounded-2xl border border-[var(--lux-border)]">
+                  {selectedRoom?.status === 'Booked' && selectedRoom.booking ? (
+                    <div className="space-y-6">
+                      {/* Premium Header Segment */}
+                      <div className="flex items-center justify-between">
                          <div className="space-y-1">
-                           <p className="text-[8px] font-black uppercase text-[var(--lux-muted)]">Guest Name</p>
-                           <p className="text-sm font-bold">{selectedRoom.booking.guestDetails?.name}</p>
+                            <h4 className="text-[8px] font-black uppercase tracking-[0.2em] text-[var(--lux-muted)]">Guest Profile</h4>
+                            <div className="flex items-center gap-3">
+                               <div className="w-10 h-10 rounded-xl bg-[var(--lux-gold)]/10 flex items-center justify-center text-[var(--lux-gold)] font-bold border border-[var(--lux-gold)]/20">
+                                 {selectedRoom.booking.guestDetails?.name?.[0]}
+                               </div>
+                               <div>
+                                  <p className="text-sm font-bold tracking-tight text-white">{selectedRoom.booking.guestDetails?.name}</p>
+                                  <p className="text-[8px] font-black uppercase text-[var(--lux-muted)]">{selectedRoom.booking.guestDetails?.phone}</p>
+                               </div>
+                            </div>
                          </div>
-                         <div className="text-right space-y-1">
-                           <p className="text-[8px] font-black uppercase text-[var(--lux-muted)]">Member Since</p>
-                           <p className="text-[10px] font-bold">New Member</p>
+                         <div className={`px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest shadow-lg ${
+                            (Number(selectedRoom.booking.balanceAmount ?? selectedRoom.booking.balance_amount) ?? (Number(selectedRoom.booking.totalAmount || selectedRoom.booking.total_amount) - (Number(selectedRoom.booking.paidAmount || selectedRoom.booking.paid_amount) || 0))) <= 0 ? 'bg-green-500 text-white' : 
+                            ((Number(selectedRoom.booking.paidAmount || selectedRoom.booking.paid_amount) || 0) > 0 ? 'bg-yellow-500 text-black' : 'bg-red-500 text-white')
+                          }`}>
+                            {(Number(selectedRoom.booking.balanceAmount ?? selectedRoom.booking.balance_amount) ?? (Number(selectedRoom.booking.totalAmount || selectedRoom.booking.total_amount) - (Number(selectedRoom.booking.paidAmount || selectedRoom.booking.paid_amount) || 0))) <= 0 ? 'PAID' : ((Number(selectedRoom.booking.paidAmount || selectedRoom.booking.paid_amount) || 0) > 0 ? 'PARTIAL' : 'UNPAID')}
                          </div>
-                       </div>
+                      </div>
 
-                       <div className="grid grid-cols-2 gap-3">
-                         <div className="bg-[var(--lux-bg)] p-4 rounded-2xl border border-[var(--lux-border)]">
-                            <p className="text-[8px] font-black uppercase text-[var(--lux-muted)] mb-1">Phone</p>
-                            <p className="text-[10px] font-bold">{selectedRoom.booking.guestDetails?.phone || 'N/A'}</p>
-                         </div>
-                         <div className="bg-[var(--lux-bg)] p-4 rounded-2xl border border-[var(--lux-border)]">
-                            <p className="text-[8px] font-black uppercase text-[var(--lux-muted)] mb-1">Email</p>
-                            <p className="text-[10px] font-bold truncate">{selectedRoom.booking.guestDetails?.email || 'N/A'}</p>
-                         </div>
-                       </div>
+                      {/* Payment Progress Card */}
+                      <div className="p-5 bg-white/[0.03] rounded-[2rem] border border-white/10 space-y-4 shadow-inner">
+                        <div className="flex justify-between items-end">
+                           <div className="space-y-1">
+                              <p className="text-[8px] font-black uppercase text-[var(--lux-muted)]">Total Amount</p>
+                              <h3 className="text-xl font-display font-bold">₹{Number(selectedRoom.booking.totalAmount || selectedRoom.booking.total_amount) || 0}</h3>
+                           </div>
+                           <div className="text-right space-y-1">
+                              <p className="text-[8px] font-black uppercase text-[var(--lux-muted)]">Balance Due</p>
+                              <p className={`text-xl font-display font-bold ${(Number(selectedRoom.booking.balanceAmount ?? selectedRoom.booking.balance_amount) ?? (Number(selectedRoom.booking.totalAmount || selectedRoom.booking.total_amount) - (Number(selectedRoom.booking.paidAmount || selectedRoom.booking.paid_amount) || 0))) > 0 ? 'text-red-500' : 'text-green-500'}`}>
+                                ₹{Number(selectedRoom.booking.balanceAmount ?? selectedRoom.booking.balance_amount) ?? (Number(selectedRoom.booking.totalAmount || selectedRoom.booking.total_amount) - (Number(selectedRoom.booking.paidAmount || selectedRoom.booking.paid_amount) || 0))}
+                              </p>
+                           </div>
+                        </div>
 
-                       <div className="p-5 bg-black/5 rounded-[2rem] border border-[var(--lux-border)] space-y-4">
-                         <div className="flex justify-between text-[8px] font-black uppercase tracking-widest opacity-40">
-                           <span>Payment Summary</span>
-                           <span>Status: {selectedRoom.booking.paymentStatus}</span>
-                         </div>
-                         <div className="space-y-2">
-                           <div className="flex justify-between items-center text-xs">
-                             <span className="opacity-60">Total Amount</span>
-                             <span className="font-bold">₹{selectedRoom.booking.totalAmount}</span>
+                        {/* Progress Line */}
+                        <div className="space-y-1.5">
+                           <div className="flex justify-between text-[7px] font-black uppercase tracking-widest text-[var(--lux-muted)]">
+                              <span>Settlement Progress</span>
+                              <span>{Math.min(100, Math.round(((Number(selectedRoom.booking.paidAmount || selectedRoom.booking.paid_amount) || 0) / (Number(selectedRoom.booking.totalAmount || selectedRoom.booking.total_amount) || 1)) * 100))}%</span>
                            </div>
-                           <div className="flex justify-between items-center text-xs">
-                             <span className="opacity-60">Paid Amount</span>
-                             <span className="font-bold text-green-500">₹{selectedRoom.booking.paidAmount}</span>
+                           <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                              <motion.div 
+                                initial={{ width: 0 }}
+                                animate={{ width: `${Math.min(100, Math.round(((Number(selectedRoom.booking.paidAmount || selectedRoom.booking.paid_amount) || 0) / (Number(selectedRoom.booking.totalAmount || selectedRoom.booking.total_amount) || 1)) * 100))}%` }}
+                                className={`h-full rounded-full ${(Number(selectedRoom.booking.balanceAmount ?? selectedRoom.booking.balance_amount) ?? (Number(selectedRoom.booking.totalAmount || selectedRoom.booking.total_amount) - (Number(selectedRoom.booking.paidAmount || selectedRoom.booking.paid_amount) || 0))) <= 0 ? 'bg-green-500' : 'bg-[var(--lux-gold)]'}`}
+                              />
                            </div>
-                           <div className="h-px bg-black opacity-5" />
+                        </div>
+                      </div>
+
+                      {/* Functional Add Payment Section */}
+                      {selectedRoom.booking.balanceAmount > 0 && (
+                        <div className="p-5 bg-[var(--lux-card)] rounded-3xl border border-[var(--lux-border)] shadow-xl space-y-4">
                            <div className="flex justify-between items-center">
-                             <span className="text-[10px] font-black uppercase tracking-widest text-[var(--lux-muted)]">Remaining</span>
-                             <span className={`text-lg font-display font-bold ${selectedRoom.booking.balanceAmount > 0 ? 'text-red-500' : 'text-green-500'}`}>
-                               ₹{selectedRoom.booking.balanceAmount}
-                             </span>
+                              <p className="text-[9px] font-black uppercase text-[var(--lux-gold)] tracking-widest">Settle Balance</p>
+                              <ShieldCheck size={14} className="text-[var(--lux-gold)] opacity-40" />
                            </div>
-                         </div>
-                       </div>
-
-                       <div className="grid grid-cols-2 gap-4">
-                         <div className="space-y-1">
-                           <p className="text-[8px] font-black uppercase text-[var(--lux-muted)] ml-2">Check-in</p>
-                           <div className="bg-[var(--lux-bg)] p-3 rounded-xl border border-[var(--lux-border)] text-center font-bold text-[10px]">
-                             {new Date(selectedRoom.booking.checkin).toLocaleDateString()}
+                           
+                           <div className="grid grid-cols-2 gap-2 p-1 bg-[var(--lux-bg)] rounded-xl border border-[var(--lux-border)]">
+                              {['UPI', 'Cash'].map(m => (
+                                <button key={m} onClick={() => setPaymentMethod(m)} className={`py-2 rounded-lg text-[8px] font-black uppercase transition-all ${paymentMethod === m ? 'bg-[var(--lux-gold)] text-black shadow-md' : 'text-[var(--lux-muted)] hover:text-white'}`}>
+                                  {m}
+                                </button>
+                              ))}
                            </div>
-                         </div>
-                         <div className="space-y-1">
-                           <p className="text-[8px] font-black uppercase text-[var(--lux-muted)] ml-2">Check-out</p>
-                           <div className="bg-[var(--lux-bg)] p-3 rounded-xl border border-[var(--lux-border)] text-center font-bold text-[10px]">
-                             {new Date(selectedRoom.booking.checkout).toLocaleDateString()}
+
+                           <div className="relative">
+                              <input 
+                                type="number" 
+                                placeholder="Enter Amount" 
+                                value={offlineAmount} 
+                                onChange={(e) => setOfflineAmount(e.target.value)}
+                                className="w-full bg-[var(--lux-bg)] border border-[var(--lux-border)] rounded-2xl py-4 px-6 text-[11px] font-bold outline-none focus:border-[var(--lux-gold)] transition-all shadow-inner" 
+                              />
+                              <button 
+                                onClick={async () => {
+                                  if (!offlineAmount || Number(offlineAmount) <= 0) return toast.error("Enter amount");
+                                  const tid = toast.loading("Processing...");
+                                  try {
+                                    const res = await fetch(`${API_BASE_URL}/api/content/bookings/admin/${selectedRoom.booking._id}`, {
+                                      method: 'PATCH',
+                                      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('hotel_token')}` },
+                                      body: JSON.stringify({ paymentUpdate: { amount: Number(offlineAmount), mode: paymentMethod === 'UPI' ? 'UPI' : 'Cash' } })
+                                    });
+                                    if (res.ok) {
+                                      toast.success("Payment Settled", { id: tid });
+                                      setOfflineAmount('');
+                                      refetchAll();
+                                      queryClient.invalidateQueries({ queryKey: ['active-bookings'] });
+                                    } else throw new Error("Update failed");
+                                  } catch (err: any) { toast.error(err.message, { id: tid }); }
+                                }}
+                                className="absolute right-2 top-2 bottom-2 px-6 bg-[var(--lux-gold)] text-black rounded-xl text-[9px] font-black uppercase tracking-widest hover:scale-[1.05] transition-all"
+                              >
+                                Collect
+                              </button>
                            </div>
-                         </div>
-                       </div>
-                       
-                        <div className="pt-2 grid grid-cols-2 gap-3">
-                         {selectedRoom.booking.balanceAmount <= 0 && (
-                           <button 
-                             onClick={() => setShowInvoice(selectedRoom.booking)}
-                             className="py-4 bg-black text-white rounded-2xl text-[9px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all flex items-center justify-center gap-2 shadow-xl"
-                           >
-                              <FileText size={14} /> Invoice
-                           </button>
-                         )}
-                         <button 
-                           onClick={() => setShowEditDrawer(true)}
-                           className={`py-4 bg-[var(--lux-gold)] text-black rounded-2xl text-[9px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all flex items-center justify-center gap-2 shadow-xl ${selectedRoom.booking.balanceAmount > 0 ? 'col-span-2' : ''}`}
-                         >
-                            <Edit size={14} /> Edit Records
-                         </button>
-                       </div>
+                        </div>
+                      )}
 
-                       <button 
-                         onClick={() => setShowCheckoutConfirm(true)}
-                         className="w-full py-4 bg-red-500/10 border border-red-500/20 text-red-500 rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-2"
-                       >
-                          <LogOut size={14} /> Force Check-out
-                       </button>
+                      {/* Checkout Restricted Logic */}
+                      {selectedRoom.booking.balanceAmount > 0 && (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-red-500/5 rounded-2xl border border-red-500/20 flex items-center gap-3">
+                           <div className="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center text-red-500">
+                              <Info size={16} />
+                           </div>
+                           <p className="text-[8px] font-bold text-red-500 uppercase tracking-widest leading-relaxed">
+                              ⚠️Ã¯Â¸Â Checkout Restricted. Clear ₹{selectedRoom.booking.balanceAmount} balance first.
+                           </p>
+                        </motion.div>
+                      )}
 
-                       {selectedRoom.booking.balanceAmount > 0 && (
-                         <div className="p-4 bg-red-500/5 rounded-2xl border border-red-500/20 text-center">
-                           <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest">Pending Payment Required</p>
-                         </div>
-                       )}
-                     </div>
-                   </>
+                      <div className="grid grid-cols-2 gap-3 pt-2">
+                        <button 
+                          onClick={() => setShowInvoice(selectedRoom.booking)}
+                          className={`py-4 bg-black text-white rounded-2xl text-[9px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all flex items-center justify-center gap-2 shadow-xl border border-white/10 ${selectedRoom.booking.balanceAmount > 0 ? 'opacity-30 cursor-not-allowed' : ''}`}
+                        >
+                          <FileText size={14} /> Bill Preview
+                        </button>
+                        <button 
+                          onClick={() => setShowEditDrawer(true)}
+                          className="py-4 bg-[var(--lux-gold)] text-black rounded-2xl text-[9px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all flex items-center justify-center gap-2 shadow-xl"
+                        >
+                          <Edit size={14} /> Amend
+                        </button>
+                      </div>
+
+                      <button 
+                        disabled={selectedRoom.booking.balanceAmount > 0}
+                        onClick={() => setShowCheckoutConfirm(true)}
+                        className={`w-full py-5 rounded-3xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-xl ${
+                          selectedRoom.booking.balanceAmount > 0 
+                            ? 'bg-[var(--lux-glass)] text-[var(--lux-muted)] cursor-not-allowed border border-white/5 opacity-50' 
+                            : 'bg-red-500 text-white hover:bg-red-600 shadow-[0_10px_30px_rgba(239,68,68,0.2)]'
+                        }`}
+                      >
+                        <LogOut size={18} />
+                        <span>{selectedRoom.booking.balanceAmount > 0 ? 'Payment Pending' : 'Check-out Guest'}</span>
+                      </button>
+                    </div>
                  ) : (
                    <>
                      {/* CHECK-IN FORM (Old View) */}
@@ -1513,29 +1787,82 @@ const GlobalDashboard = ({ activeHotelId, onHotelChange }: { activeHotelId: stri
                                 />
                              </div>
 
-                             <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                   <label className="text-[8px] font-black uppercase tracking-widest text-[var(--lux-muted)] ml-2">Amount Paid (₹)</label>
-                                   <input 
-                                     type="number" 
-                                     placeholder={selectedRoom?.price?.toString() || "0"}
-                                     value={offlineAmount}
-                                     onChange={(e) => setOfflineAmount(e.target.value)}
-                                     className="w-full bg-[var(--lux-bg)] border border-[var(--lux-border)] rounded-2xl py-4 px-6 text-[11px] font-bold outline-none focus:border-[var(--lux-gold)] transition-all shadow-inner" 
-                                   />
+                                 <label className="text-[8px] font-black uppercase tracking-widest text-[var(--lux-muted)] ml-2 shadow-inner">Payment Method</label>
+                                 <div className="grid grid-cols-4 gap-2 p-1 bg-[var(--lux-card)] rounded-2xl border border-[var(--lux-border)] shadow-sm">
+                                   {['UPI', 'Cash', 'Partial', 'Pay Later'].map((method) => (
+                                     <button
+                                       type="button"
+                                       key={method}
+                                       onClick={() => {
+                                         setPaymentMethod(method);
+                                         setOfflineAmount(method === 'Cash' ? (selectedRoom?.price?.toString() || '') : '');
+                                         setOnlineAmount(method === 'UPI' ? (selectedRoom?.price?.toString() || '') : '');
+                                         if (method === 'Pay Later') {
+                                           setOfflineAmount('');
+                                           setOnlineAmount('');
+                                         }
+                                       }}
+                                       className={`py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${
+                                         paymentMethod === method 
+                                           ? (method === 'Pay Later' ? 'bg-orange-500 text-white shadow-lg scale-[1.02]' : 'bg-[var(--lux-gold)] text-black shadow-lg scale-[1.02]')
+                                           : 'text-[var(--lux-muted)] hover:text-[var(--lux-text)] hover:bg-[var(--lux-bg)]'
+                                       }`}
+                                     >
+                                       {method}
+                                     </button>
+                                   ))}
                                 </div>
-                                <div className="space-y-2">
-                                   <label className="text-[8px] font-black uppercase tracking-widest text-[var(--lux-muted)] ml-2">Online Paid (₹)</label>
-                                    <input 
-                                      type="number" 
-                                      value={onlineAmount}
-                                      onChange={(e) => setOnlineAmount(e.target.value)}
-                                      className="w-full bg-[var(--lux-bg)] border border-[var(--lux-border)] rounded-2xl py-4 px-6 text-[11px] font-bold outline-none focus:border-[var(--lux-gold)] transition-all shadow-inner" 
-                                    />
-                                </div>
-                             </div>
 
-                             <div className="pt-4 grid grid-cols-2 gap-4">
+                                <AnimatePresence mode="popLayout">
+                                  {paymentMethod !== 'Pay Later' && (
+                                    <motion.div 
+                                      initial={{ opacity: 0, height: 0 }}
+                                      animate={{ opacity: 1, height: 'auto' }}
+                                      exit={{ opacity: 0, height: 0 }}
+                                      className={`grid gap-4 overflow-hidden ${paymentMethod === 'Partial' ? 'grid-cols-2' : 'grid-cols-1'}`}
+                                    >
+                                       {paymentMethod !== 'UPI' && (
+                                         <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-2">
+                                            <label className="text-[8px] font-black uppercase tracking-widest text-[var(--lux-muted)] ml-2">Cash Paid (₹)</label>
+                                            <input 
+                                              type="number" 
+                                              placeholder={paymentMethod === 'Partial' ? "Cash Part" : (selectedRoom?.price?.toString() || "0")}
+                                              value={offlineAmount}
+                                              onChange={(e) => setOfflineAmount(e.target.value)}
+                                              className="w-full bg-[var(--lux-bg)] border border-[var(--lux-border)] rounded-2xl py-4 px-6 text-[11px] font-bold outline-none focus:border-[var(--lux-gold)] transition-all shadow-inner" 
+                                            />
+                                         </motion.div>
+                                       )}
+                                       {paymentMethod !== 'Cash' && (
+                                         <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-2">
+                                            <label className="text-[8px] font-black uppercase tracking-widest text-[var(--lux-muted)] ml-2">Online Paid (₹)</label>
+                                             <input 
+                                               type="number" 
+                                               placeholder={paymentMethod === 'Partial' ? "Online Part" : (selectedRoom?.price?.toString() || "0")}
+                                               value={onlineAmount}
+                                               onChange={(e) => setOnlineAmount(e.target.value)}
+                                               className="w-full bg-[var(--lux-bg)] border border-[var(--lux-border)] rounded-2xl py-4 px-6 text-[11px] font-bold outline-none focus:border-[var(--lux-gold)] transition-all shadow-inner" 
+                                             />
+                                         </motion.div>
+                                       )}
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+
+                                {/* Total Paid Calculation */}
+                                <div className="flex justify-between items-center py-4 px-5 bg-[var(--lux-bg)] rounded-2xl border border-[var(--lux-border)] shadow-sm">
+                                   <span className="text-[10px] font-black uppercase tracking-widest text-[var(--lux-muted)]">Payment Status</span>
+                                   <span className={`text-lg font-display font-bold ${((Number(offlineAmount) || 0) + (Number(onlineAmount) || 0)) < (selectedRoom?.price || 0) ? 'text-red-500' : 'text-green-500'}`}>
+                                      ₹{(Number(offlineAmount) || 0) + (Number(onlineAmount) || 0)} <span className="text-[10px] text-[var(--lux-muted)] opacity-60">/ {selectedRoom?.price || 0}</span>
+                                   </span>
+                                </div>
+                                {paymentMethod !== 'Pay Later' && ((Number(offlineAmount) || 0) + (Number(onlineAmount) || 0)) < (selectedRoom?.price || 0) && (
+                                  <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[9px] font-black text-red-500 bg-red-500/10 py-2 rounded-xl text-center uppercase tracking-widest border border-red-500/20">
+                                    ⚠️ Incomplete Payment
+                                  </motion.p>
+                                )}
+
+                             <div className="pt-2 grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                       <label className="text-[8px] font-black uppercase text-[var(--lux-muted)] ml-2">Check-in</label>
                                       <input 
@@ -1558,9 +1885,9 @@ const GlobalDashboard = ({ activeHotelId, onHotelChange }: { activeHotelId: stri
 
                              <button 
                                onClick={handleQuickCheckIn}
-                               disabled={!selectedRoom || !guestName || !guestMobile}
-                               className={`w-full py-5 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-xl ${
-                                 selectedRoom && guestName && guestMobile ? 'bg-[var(--lux-gold)] text-black shadow-[var(--lux-gold)]/20 hover:scale-[1.02]' : 'bg-[var(--lux-glass)] text-[var(--lux-muted)] cursor-not-allowed'
+                               disabled={!selectedRoom || !guestName || !guestMobile || (paymentMethod !== 'Pay Later' && ((Number(offlineAmount) || 0) + (Number(onlineAmount) || 0)) < (selectedRoom?.price || 0))}
+                               className={`w-full py-5 rounded-3xl text-[11px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-xl ${
+                                 selectedRoom && guestName && guestMobile && (paymentMethod === 'Pay Later' || (((Number(offlineAmount) || 0) + (Number(onlineAmount) || 0)) >= (selectedRoom?.price || 0))) ? 'bg-[var(--lux-gold)] text-black shadow-[0_10px_30px_rgba(212,175,55,0.3)] hover:scale-[1.02]' : 'bg-[var(--lux-glass)] text-[var(--lux-muted)] cursor-not-allowed opacity-50'
                                }`}
                              >
                                 <CheckCircle size={18} />
@@ -1621,7 +1948,7 @@ const GlobalDashboard = ({ activeHotelId, onHotelChange }: { activeHotelId: stri
                         className="relative bg-[var(--lux-card)] border border-[var(--lux-border)] p-8 rounded-[2.5rem] max-w-sm w-full shadow-2xl text-center space-y-6"
                       >
                          <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto border border-red-500/20">
-                            <span className="text-4xl">⚠️</span>
+                            <span className="text-4xl">⚠️Ã¯Â¸Â</span>
                          </div>
                          <div className="space-y-2">
                             <h3 className="text-2xl font-display font-bold">Force Check-out?</h3>
