@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -8,13 +8,37 @@ import {
   TrendingUp, Calendar, ArrowRight, UserPlus, LogOut, Brush, Plus,
   LayoutDashboard, Bed, Users, CreditCard, BarChart3, Settings, 
   Sun, Moon, ChevronRight, Menu, Bell, FileDown, Eye, Edit, Trash2, 
-  DollarSign, MoreHorizontal, Info, MapPin, LayoutGrid, Map, Smartphone
+  DollarSign, MoreHorizontal, Info, MapPin, LayoutGrid, Map, Smartphone, Play
 } from 'lucide-react';
 import { useHotelsList } from './hooks/useContent';
 import { useActiveBookings } from './hooks/useBookings';
 import { ImageUpload } from './components/ui/ImageUpload';
 import { API_BASE_URL } from './config/api';
+import { BrowserRouter, Routes, Route, Navigate, NavLink } from 'react-router-dom';
 import { toast, Toaster } from 'sonner';
+
+export const getBookingFinancials = (booking: any) => {
+  if (!booking) return { total: 0, paid: 0, balance: 0, paidPercent: 0, status: 'UNPAID' };
+  
+  const total = Number(booking.totalAmount || booking.total_amount) || 0;
+  const paid = (Number(booking.onlinePaid) || 0) + (Number(booking.offlinePaid) || 0) || Number(booking.paidAmount || booking.paid_amount) || 0;
+  
+  let balance = total - paid;
+  if (booking.balanceAmount !== undefined && booking.balanceAmount !== null && !isNaN(Number(booking.balanceAmount))) {
+    balance = Number(booking.balanceAmount);
+  } else if (booking.balance_amount !== undefined && booking.balance_amount !== null && !isNaN(Number(booking.balance_amount))) {
+    balance = Number(booking.balance_amount);
+  } else {
+    balance = Math.max(0, total - paid);
+  }
+  
+  const paidPercent = total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : (paid >= total ? 100 : 0);
+  const status = balance <= 0 ? 'PAID' : (paid > 0 ? 'PARTIAL' : 'UNPAID');
+  
+  return { total, paid, balance, paidPercent, status };
+};
+
+
 
 // --- GLOBAL THEME & NAV ---
 
@@ -26,7 +50,8 @@ const SIDEBAR_ITEMS = [
   { id: 'rooms', label: 'Rooms Management', icon: Bed },
 ];
 
-const Sidebar = ({ activeTab, setActiveTab, isOpen, setIsOpen, onLogout }: { activeTab: string, setActiveTab: (id: string) => void, isOpen: boolean, setIsOpen: (o: boolean) => void, onLogout: () => void }) => {
+const Sidebar = ({ isOpen, setIsOpen, onLogout }: { isOpen: boolean, setIsOpen: (o: boolean) => void, onLogout: () => void }) => {
+
   return (
     <>
       <AnimatePresence>
@@ -47,20 +72,25 @@ const Sidebar = ({ activeTab, setActiveTab, isOpen, setIsOpen, onLogout }: { act
         <nav className="flex-1 space-y-3">
           {SIDEBAR_ITEMS.map((item) => {
             const Icon = item.icon;
-            const isActive = activeTab === item.id;
+
             return (
-              <button
+              <NavLink
                 key={item.id}
+                to={`/${item.id}`}
                 onClick={() => {
-                  setActiveTab(item.id);
                   if (window.innerWidth < 1024) setIsOpen(false);
                 }}
-                className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition-all duration-300 group ${isActive ? 'bg-[var(--lux-gold)] text-black shadow-lg shadow-[var(--lux-gold)]/10' : 'text-[var(--lux-muted)] hover:bg-[var(--lux-bg)] hover:text-[var(--lux-text)]'}`}
+                className={({ isActive }) => `w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition-all duration-300 group ${isActive ? 'bg-[var(--lux-gold)] text-black shadow-lg shadow-[var(--lux-gold)]/10' : 'text-[var(--lux-muted)] hover:bg-[var(--lux-bg)] hover:text-[var(--lux-text)]'}`}
               >
-                <Icon size={18} className={isActive ? 'text-black' : 'group-hover:text-[var(--lux-gold)] transition-colors'} />
-                <span className="text-[10px] font-bold uppercase tracking-widest">{item.label}</span>
-                {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-black"></div>}
-              </button>
+                {({ isActive }) => (
+                  <>
+                    <Icon size={18} className={isActive ? 'text-black' : 'group-hover:text-[var(--lux-gold)] transition-colors'} />
+                    <span className="text-[10px] font-bold uppercase tracking-widest">{item.label}</span>
+                    {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-black"></div>}
+                  </>
+                )}
+              </NavLink>
+
             );
           })}
         </nav>
@@ -146,9 +176,10 @@ const Header = ({ theme, setTheme, onMenuClick, hotelName, bookedCount = 12, arr
           
           <button 
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="w-10 h-10 flex items-center justify-center bg-[var(--lux-glass)] rounded-xl border border-[var(--lux-border)] hover:border-[var(--lux-gold)]/40 transition-all shadow-sm"
+            className="w-12 h-12 flex items-center justify-center bg-[var(--lux-soft)] rounded-full transition-all hover:scale-105 shadow-sm active:scale-95"
+            aria-label="Toggle Theme"
           >
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            {theme === 'dark' ? <Sun size={20} className="text-[var(--lux-gold)]" /> : <Moon size={20} className="text-[var(--lux-gold)]" />}
           </button>
         </div>
       </div>
@@ -481,7 +512,7 @@ const LoginPage = ({ hotelName, hotelId, onBack, onLogin }: { hotelName: string,
           </div>
           <button 
             disabled={loading || !password || !username}
-            className="w-full bg-[var(--lux-gold)] text-black font-bold py-5 rounded-2xl flex items-center justify-center gap-3 hover:scale-[1.02] transition-all active:scale-95 disabled:opacity-50 shadow-xl shadow-[var(--lux-gold)]/20"
+            className="w-full btn-premium py-5 flex items-center justify-center gap-3 disabled:opacity-50 shadow-xl shadow-[var(--lux-gold)]/20"
           >
             {loading ? <Loader2 className="animate-spin" size={18} /> : <><LogIn size={18} /> AUTHORIZE</>}
           </button>
@@ -563,7 +594,7 @@ const RoomDetailsDrawer = ({
                    <span className="text-[8px] font-black uppercase text-[var(--lux-muted)] tracking-widest">Total (Inc. Tax)</span>
                    <span className="text-xl font-bold text-[var(--lux-gold)]">₹{(room.price * 1.12).toFixed(0)}</span>
                 </div>
-                <button disabled={isSubmitting} className="w-full bg-[var(--lux-gold)] text-black py-3.5 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-[var(--lux-gold)]/10">
+                <button disabled={isSubmitting} className="w-full btn-premium py-3.5 shadow-lg shadow-[var(--lux-gold)]/10">
                   {isSubmitting ? 'Processing...' : 'Confirm Check-in'}
                 </button>
               </form>
@@ -623,14 +654,10 @@ const BookingDetailsDrawer = ({ booking, isOpen, onClose, onUpdate }: { booking:
 
   if (!booking) return null;
   
-  const total = Number(booking.totalAmount || booking.total_amount) || 0;
-  const paid = Number(booking.paidAmount || booking.paid_amount) || 0;
-  const balance = Number(booking.balanceAmount ?? booking.balance_amount) ?? (total - paid);
-  const paidPercent = total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0;
+  const { total, paid, balance, paidPercent, status: paymentStatus } = getBookingFinancials(booking);
   
   const nights = Math.max(1, Math.ceil((new Date(booking.checkout).getTime() - new Date(booking.checkin).getTime()) / (1000 * 60 * 60 * 24)));
-  
-  const paymentStatus = balance <= 0 ? 'PAID' : (paid > 0 ? 'PARTIAL' : 'UNPAID');
+
   const statusColors = {
     PAID: 'bg-green-500 text-white shadow-green-500/20',
     PARTIAL: 'bg-yellow-500 text-black shadow-yellow-500/20',
@@ -655,11 +682,14 @@ const BookingDetailsDrawer = ({ booking, isOpen, onClose, onUpdate }: { booking:
           'Authorization': `Bearer ${localStorage.getItem('hotel_token')}` 
         },
         body: JSON.stringify({
-          paymentUpdate: {
-            amount: amountNum,
-            mode: addMode
+          paymentDetails: {
+            totalAmount: getBookingFinancials(booking).total,
+            paidAmount: getBookingFinancials(booking).paid + amountNum,
+            onlinePaid: (Number(booking.onlinePaid) || 0) + (addMode === 'UPI' ? amountNum : 0),
+            offlinePaid: (Number(booking.offlinePaid) || 0) + (addMode === 'Cash' ? amountNum : 0)
           }
         })
+
       });
 
       if (res.ok) {
@@ -808,11 +838,11 @@ const BookingDetailsDrawer = ({ booking, isOpen, onClose, onUpdate }: { booking:
                 <div className="flex justify-between items-center relative z-10">
                   <div className="space-y-1">
                      <p className="text-[8px] font-black uppercase text-[var(--lux-muted)]">Financial Overview</p>
-                     <h3 className="text-2xl font-display font-bold">Total: ₹{booking.totalAmount}</h3>
+                     <h3 className="text-2xl font-display font-bold">Total: ₹{getBookingFinancials(booking).total}</h3>
                   </div>
                   <div className="text-right">
-                     <p className={`text-[10px] font-black uppercase tracking-widest ${paymentStatus === 'PAID' ? 'text-green-500' : 'text-red-500'}`}>
-                        {paymentStatus === 'PAID' ? 'Fully Paid ✅' : `₹${booking.balanceAmount} Pending ⚠️Ã¯Â¸Â`}
+                     <p className={`text-[10px] font-black uppercase tracking-widest ${getBookingFinancials(booking).status === 'PAID' ? 'text-green-500' : 'text-red-500'}`}>
+                        {getBookingFinancials(booking).status === 'PAID' ? 'Fully Paid ✅' : `₹${getBookingFinancials(booking).balance} Pending ⚠️Ã¯Â¸Â `}
                      </p>
                   </div>
                 </div>
@@ -821,14 +851,15 @@ const BookingDetailsDrawer = ({ booking, isOpen, onClose, onUpdate }: { booking:
                 <div className="space-y-2">
                    <div className="flex justify-between text-[8px] font-black uppercase tracking-widest text-[var(--lux-muted)]">
                       <span>Payment Progress</span>
-                      <span className={paidPercent === 100 ? 'text-green-500' : ''}>{paidPercent}%</span>
+                      <span className={getBookingFinancials(booking).paidPercent === 100 ? 'text-green-500' : ''}>{getBookingFinancials(booking).paidPercent}%</span>
                    </div>
                    <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden p-0.5 border border-white/5">
                       <motion.div 
                         initial={{ width: 0 }}
-                        animate={{ width: `${paidPercent}%` }}
-                        className={`h-full rounded-full ${paidPercent === 100 ? 'bg-green-500' : 'bg-[var(--lux-gold)]'} shadow-[0_0_15px_rgba(212,175,55,0.4)]`}
+                        animate={{ width: `${getBookingFinancials(booking).paidPercent}%` }}
+                        className={`h-full rounded-full ${getBookingFinancials(booking).paidPercent === 100 ? 'bg-green-500' : 'bg-[var(--lux-gold)]'} shadow-[0_0_15px_rgba(212,175,55,0.4)]`}
                       />
+
                    </div>
                 </div>
 
@@ -884,13 +915,14 @@ const BookingDetailsDrawer = ({ booking, isOpen, onClose, onUpdate }: { booking:
                 <div className="flex justify-between items-center pt-2">
                    <div className="space-y-1">
                       <p className="text-[8px] font-black uppercase text-[var(--lux-muted)]">Total Paid</p>
-                      <p className="text-lg font-bold text-green-500">₹{booking.paidAmount}</p>
+                      <p className="text-lg font-bold text-green-500">₹{getBookingFinancials(booking).paid}</p>
                    </div>
                    <div className="space-y-1 text-right">
                       <p className="text-[8px] font-black uppercase text-[var(--lux-muted)]">Balance Due</p>
-                      <p className={`text-lg font-bold ${paymentStatus === 'PAID' ? 'text-green-500' : 'text-red-500'}`}>₹{booking.balanceAmount}</p>
+                      <p className={`text-lg font-bold ${getBookingFinancials(booking).status === 'PAID' ? 'text-green-500' : 'text-red-500'}`}>₹{getBookingFinancials(booking).balance}</p>
                    </div>
                 </div>
+
 
                 {/* History Block */}
                 <div className="pt-2">
@@ -910,9 +942,10 @@ const BookingDetailsDrawer = ({ booking, isOpen, onClose, onUpdate }: { booking:
                            <span className="font-bold text-green-500 font-sans">+ ₹{booking.offlinePaid}</span>
                         </div>
                       )}
-                      {booking.paidAmount === 0 && (
+                      {getBookingFinancials(booking).paid === 0 && (
                         <p className="text-[10px] font-bold text-[var(--lux-muted)] opacity-30 italic text-center py-2">No payment transactions recorded</p>
                       )}
+
                    </div>
                 </div>
               </div>
@@ -1341,8 +1374,14 @@ const GlobalDashboard = ({ activeHotelId, onHotelChange }: { activeHotelId: stri
       return matchesSearch && matchesStatus;
     });
   }, [rooms, searchQuery, statusFilter]);
+  
+  const liveSelectedRoom = useMemo(() => {
+    if (!selectedRoom) return null;
+    return rooms.find((r: any) => r.number === selectedRoom.number) || selectedRoom;
+  }, [rooms, selectedRoom]);
 
   const stats = useMemo(() => {
+
     const counts = { available: 0, occupied: 0, cleaning: 0, maint: 0 };
     rooms.forEach(r => {
       if (r.status === 'Available') counts.available++;
@@ -1411,7 +1450,7 @@ const GlobalDashboard = ({ activeHotelId, onHotelChange }: { activeHotelId: stri
         headers: { 'Authorization': `Bearer ${localStorage.getItem('hotel_token')}` }
       });
       if (res.ok) {
-        toast.success(`Room ${selectedRoom.number} checked out successfully`, { id: tid });
+        toast.success(`Room ${selectedRoom.number} checked out. Status: NEEDS CLEANING`, { id: tid });
         setShowCheckoutConfirm(false);
         setSelectedRoom(null);
         refetchAll();
@@ -1420,6 +1459,28 @@ const GlobalDashboard = ({ activeHotelId, onHotelChange }: { activeHotelId: stri
         queryClient.invalidateQueries({ queryKey: ['availability'] });
         queryClient.invalidateQueries({ queryKey: ['room-status'] });
       } else throw new Error("Check-out failed");
+    } catch (err: any) { toast.error(err.message, { id: tid }); }
+  };
+
+  const handleUpdateRoomStatus = async (roomNumber: string, status: string) => {
+    const tid = toast.loading(`Updating Room ${roomNumber} to ${status}...`);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/content/room-status/update`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('hotel_token')}` 
+        },
+        body: JSON.stringify({ hotelId: activeHotelId, roomNumber, status })
+      });
+      if (res.ok) {
+        toast.success(`Room ${roomNumber} is now ${status}`, { id: tid });
+        queryClient.invalidateQueries({ queryKey: ['room-status'] });
+        // Update selection to reflect new status labels
+        if (selectedRoom?.number === roomNumber) {
+           setSelectedRoom((prev: any) => ({ ...prev, status }));
+        }
+      } else throw new Error("Update failed");
     } catch (err: any) { toast.error(err.message, { id: tid }); }
   };
 
@@ -1457,27 +1518,28 @@ const GlobalDashboard = ({ activeHotelId, onHotelChange }: { activeHotelId: stri
            </div>
 
            {/* ACTION BUTTONS */}
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <button className="flex items-center justify-center gap-3 py-4 bg-[var(--lux-glass)] border border-[var(--lux-border)] rounded-xl text-[10px] font-black uppercase tracking-widest hover:border-[var(--lux-gold)] transition-all group">
-                 <UserPlus size={16} className="text-[var(--lux-muted)] group-hover:text-[var(--lux-gold)]" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <button className="flex items-center justify-center gap-3 py-4 btn-premium group">
+                 <UserPlus size={16} />
                  <span>Walk-In Booking</span>
               </button>
-              <button className="flex items-center justify-center gap-3 py-4 bg-[var(--lux-glass)] border border-[var(--lux-border)] rounded-xl text-[10px] font-black uppercase tracking-widest hover:border-[var(--lux-gold)] transition-all group">
-                 <LogOut size={16} className="text-[var(--lux-muted)] group-hover:text-[var(--lux-gold)]" />
+              <button className="flex items-center justify-center gap-3 py-4 btn-premium group">
+                 <LogOut size={16} />
                  <span>Check-out</span>
               </button>
-              <button className="flex items-center justify-center gap-3 py-4 bg-[var(--lux-glass)] border border-[var(--lux-border)] rounded-xl text-[10px] font-black uppercase tracking-widest hover:border-[var(--lux-gold)] transition-all group">
-                 <Brush size={16} className="text-[var(--lux-muted)] group-hover:text-[var(--lux-gold)]" />
+              <button className="flex items-center justify-center gap-3 py-4 btn-premium group">
+                 <Brush size={16} />
                  <span>Mark Cleaning</span>
               </button>
-           </div>
+            </div>
 
            {/* LEGEND */}
            <div className="flex items-center gap-6 px-2">
               {[
-                { label: 'Available', color: 'bg-green-500' },
+                { label: 'Ready', color: 'bg-green-500' },
                 { label: 'Booked', color: 'bg-red-500' },
                 { label: 'Cleaning', color: 'bg-yellow-500' },
+                { label: 'Dirty', color: 'bg-[var(--lux-dirty)]' },
                 { label: 'Selected', color: 'bg-[var(--lux-gold)]' }
               ].map(item => (
                 <div key={item.label} className="flex items-center gap-2">
@@ -1497,35 +1559,40 @@ const GlobalDashboard = ({ activeHotelId, onHotelChange }: { activeHotelId: stri
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setSelectedRoom(room)}
-                    className={`p-6 rounded-3xl border transition-all cursor-pointer relative overflow-hidden group ${
-                      isActive 
-                        ? 'border-[var(--lux-gold)] shadow-[0_10px_30px_rgba(212,175,55,0.2)] ring-2 ring-[var(--lux-gold)]/50' 
-                        : 'border-[var(--lux-border)] hover:border-white/20 shadow-lg'
-                    } ${
-                      room.status === 'Booked' ? 'bg-red-500 text-white' :
-                      room.status === 'Cleaning' ? 'bg-yellow-500 text-black' :
-                      room.status === 'Maintenance' ? 'bg-orange-500 text-white' :
-                      'bg-[var(--lux-card)]'
+                    className={`p-6 rounded-3xl transition-all cursor-pointer relative overflow-hidden group ${
+                      isActive ? 'room-card-selected' : 
+                      room.status === 'Available' ? 'room-card-available' :
+                      room.status === 'Booked' ? 'room-card-booked' :
+                      room.status === 'Cleaning' ? 'room-card-cleaning' : 'bg-[var(--lux-card)] border border-[var(--lux-border)]'
                     }`}
                   >
                     <div className={`absolute top-4 right-4 w-2 h-2 rounded-full border border-white/20 ${
-                      room.status === 'Available' ? 'bg-green-500' :
-                      room.status === 'Booked' ? 'bg-white' :
-                      room.status === 'Cleaning' ? 'bg-black' : 'bg-white'
+                      isActive ? 'bg-white' : (
+                        room.status === 'Available' ? 'bg-green-500' :
+                        room.status === 'Booked' ? 'bg-red-500' :
+                        room.status === 'Cleaning' ? 'bg-yellow-500' : 
+                        room.status === 'Dirty' ? 'bg-[var(--lux-dirty)]' : 'bg-white'
+                      )
                     }`}></div>
                     
                     <div className="flex flex-col items-center text-center space-y-4">
                        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center border transition-all ${
-                         room.status === 'Booked' ? 'bg-white/20 border-white/40 text-white' : 
-                         room.status === 'Available' ? 'bg-white/5 border-white/5 text-[var(--lux-muted)]' :
-                         room.status === 'Cleaning' ? 'bg-black/10 border-black/20 text-black' :
+                         isActive ? 'bg-white/20 border-white/40 text-black' :
+                         room.status === 'Booked' ? 'bg-red-500/10 border-red-500/20 text-red-500' : 
+                         room.status === 'Available' ? 'bg-green-500/5 border-green-500/10 text-green-600' :
+                         room.status === 'Cleaning' ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-600' :
+                         room.status === 'Dirty' ? 'bg-[var(--lux-dirty)]/10 border-[var(--lux-dirty)]/20 text-[var(--lux-dirty)]' :
                          'bg-white/20 border-white/40 text-white'
                        }`}>
                           <Key size={24} />
                        </div>
                        <div>
                           <h4 className="text-2xl font-display font-bold leading-none mb-1 tracking-tight">{room.number}</h4>
-                          <p className={`text-[8px] font-black uppercase tracking-widest ${room.status === 'Available' ? 'opacity-60' : 'opacity-80'}`}>{room.type}</p>
+                          <p className={`text-[8px] font-black uppercase tracking-widest opacity-60`}>
+                            {room.status === 'Dirty' ? 'Needs Cleaning' : 
+                             room.status === 'Cleaning' ? 'Cleaning in Progress' : 
+                             room.status === 'Available' ? 'Ready' : room.type}
+                          </p>
                        </div>
                     </div>
                   </motion.div>
@@ -1541,20 +1608,20 @@ const GlobalDashboard = ({ activeHotelId, onHotelChange }: { activeHotelId: stri
               
               <div className="relative z-10">
                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--lux-muted)] mb-2">
-                    {selectedRoom?.status === 'Booked' ? 'Guest Details' : 'Guest Assignment'}
+                    {liveSelectedRoom?.status === 'Booked' ? 'Guest Details' : 'Guest Assignment'}
                  </p>
-                 <h2 className="text-5xl font-display font-bold tracking-tight">Room <span className="text-[var(--lux-gold)] shadow-[0_0_15px_rgba(212,175,55,0.2)]">{selectedRoom?.number || '---'}</span></h2>
+                 <h2 className="text-5xl font-display font-bold tracking-tight">Room <span className="text-[var(--lux-gold)] shadow-[0_0_15px_rgba(212,175,55,0.2)]">{liveSelectedRoom?.number || '---'}</span></h2>
               </div>
 
               <div className="w-full aspect-video bg-[var(--lux-bg)] rounded-3xl border border-[var(--lux-border)] flex flex-col items-center justify-center gap-4 text-[var(--lux-muted)] shadow-inner">
                  <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center border border-white/5">
                     <LayoutGrid size={32} className="opacity-20" />
                  </div>
-                 <p className="text-[9px] font-black uppercase tracking-[0.2em]">{selectedRoom ? `${selectedRoom.type} Ã¢â‚¬Â¢ ₹${selectedRoom.price}` : 'Select an available room'}</p>
-              </div>
+                  <p className="text-[9px] font-black uppercase tracking-[0.2em]">{liveSelectedRoom ? `${liveSelectedRoom.type} • ₹${liveSelectedRoom.price}` : "Select an available room"}</p>
+               </div>
 
-              <div className="space-y-6">
-                  {selectedRoom?.status === 'Booked' && selectedRoom.booking ? (
+               <div className="space-y-6">
+                  {liveSelectedRoom?.status === 'Booked' && liveSelectedRoom.booking ? (
                     <div className="space-y-6">
                       {/* Premium Header Segment */}
                       <div className="flex items-center justify-between">
@@ -1562,33 +1629,33 @@ const GlobalDashboard = ({ activeHotelId, onHotelChange }: { activeHotelId: stri
                             <h4 className="text-[8px] font-black uppercase tracking-[0.2em] text-[var(--lux-muted)]">Guest Profile</h4>
                             <div className="flex items-center gap-3">
                                <div className="w-10 h-10 rounded-xl bg-[var(--lux-gold)]/10 flex items-center justify-center text-[var(--lux-gold)] font-bold border border-[var(--lux-gold)]/20">
-                                 {selectedRoom.booking.guestDetails?.name?.[0]}
+                                 {liveSelectedRoom.booking.guestDetails?.name?.[0]}
                                </div>
                                <div>
-                                  <p className="text-sm font-bold tracking-tight text-white">{selectedRoom.booking.guestDetails?.name}</p>
-                                  <p className="text-[8px] font-black uppercase text-[var(--lux-muted)]">{selectedRoom.booking.guestDetails?.phone}</p>
+                                  <p className="text-sm font-bold tracking-tight text-[var(--lux-text)]">{liveSelectedRoom.booking.guestDetails?.name}</p>
+                                  <p className="text-[8px] font-black uppercase text-[var(--lux-muted)]">{liveSelectedRoom.booking.guestDetails?.phone}</p>
                                </div>
                             </div>
                          </div>
                          <div className={`px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest shadow-lg ${
-                            (Number(selectedRoom.booking.balanceAmount ?? selectedRoom.booking.balance_amount) ?? (Number(selectedRoom.booking.totalAmount || selectedRoom.booking.total_amount) - (Number(selectedRoom.booking.paidAmount || selectedRoom.booking.paid_amount) || 0))) <= 0 ? 'bg-green-500 text-white' : 
-                            ((Number(selectedRoom.booking.paidAmount || selectedRoom.booking.paid_amount) || 0) > 0 ? 'bg-yellow-500 text-black' : 'bg-red-500 text-white')
+                            getBookingFinancials(liveSelectedRoom.booking).status === 'PAID' ? 'bg-green-500 text-white' : 
+                            (getBookingFinancials(liveSelectedRoom.booking).status === 'PARTIAL' ? 'bg-yellow-500 text-black' : 'bg-red-500 text-white')
                           }`}>
-                            {(Number(selectedRoom.booking.balanceAmount ?? selectedRoom.booking.balance_amount) ?? (Number(selectedRoom.booking.totalAmount || selectedRoom.booking.total_amount) - (Number(selectedRoom.booking.paidAmount || selectedRoom.booking.paid_amount) || 0))) <= 0 ? 'PAID' : ((Number(selectedRoom.booking.paidAmount || selectedRoom.booking.paid_amount) || 0) > 0 ? 'PARTIAL' : 'UNPAID')}
+                            {getBookingFinancials(liveSelectedRoom.booking).status}
                          </div>
                       </div>
 
                       {/* Payment Progress Card */}
-                      <div className="p-5 bg-white/[0.03] rounded-[2rem] border border-white/10 space-y-4 shadow-inner">
+                      <div className="p-5 bg-[var(--lux-bg)] rounded-[2rem] border border-[var(--lux-border)] space-y-4 shadow-inner">
                         <div className="flex justify-between items-end">
                            <div className="space-y-1">
                               <p className="text-[8px] font-black uppercase text-[var(--lux-muted)]">Total Amount</p>
-                              <h3 className="text-xl font-display font-bold">₹{Number(selectedRoom.booking.totalAmount || selectedRoom.booking.total_amount) || 0}</h3>
+                              <h3 className="text-xl font-display font-bold">₹{getBookingFinancials(liveSelectedRoom.booking).total}</h3>
                            </div>
                            <div className="text-right space-y-1">
                               <p className="text-[8px] font-black uppercase text-[var(--lux-muted)]">Balance Due</p>
-                              <p className={`text-xl font-display font-bold ${(Number(selectedRoom.booking.balanceAmount ?? selectedRoom.booking.balance_amount) ?? (Number(selectedRoom.booking.totalAmount || selectedRoom.booking.total_amount) - (Number(selectedRoom.booking.paidAmount || selectedRoom.booking.paid_amount) || 0))) > 0 ? 'text-red-500' : 'text-green-500'}`}>
-                                ₹{Number(selectedRoom.booking.balanceAmount ?? selectedRoom.booking.balance_amount) ?? (Number(selectedRoom.booking.totalAmount || selectedRoom.booking.total_amount) - (Number(selectedRoom.booking.paidAmount || selectedRoom.booking.paid_amount) || 0))}
+                              <p className={`text-xl font-display font-bold ${getBookingFinancials(liveSelectedRoom.booking).balance > 0 ? 'text-red-500' : 'text-green-500'}`}>
+                                ₹{getBookingFinancials(liveSelectedRoom.booking).balance}
                               </p>
                            </div>
                         </div>
@@ -1597,20 +1664,20 @@ const GlobalDashboard = ({ activeHotelId, onHotelChange }: { activeHotelId: stri
                         <div className="space-y-1.5">
                            <div className="flex justify-between text-[7px] font-black uppercase tracking-widest text-[var(--lux-muted)]">
                               <span>Settlement Progress</span>
-                              <span>{Math.min(100, Math.round(((Number(selectedRoom.booking.paidAmount || selectedRoom.booking.paid_amount) || 0) / (Number(selectedRoom.booking.totalAmount || selectedRoom.booking.total_amount) || 1)) * 100))}%</span>
+                              <span>{getBookingFinancials(liveSelectedRoom.booking).paidPercent}%</span>
                            </div>
                            <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
                               <motion.div 
                                 initial={{ width: 0 }}
-                                animate={{ width: `${Math.min(100, Math.round(((Number(selectedRoom.booking.paidAmount || selectedRoom.booking.paid_amount) || 0) / (Number(selectedRoom.booking.totalAmount || selectedRoom.booking.total_amount) || 1)) * 100))}%` }}
-                                className={`h-full rounded-full ${(Number(selectedRoom.booking.balanceAmount ?? selectedRoom.booking.balance_amount) ?? (Number(selectedRoom.booking.totalAmount || selectedRoom.booking.total_amount) - (Number(selectedRoom.booking.paidAmount || selectedRoom.booking.paid_amount) || 0))) <= 0 ? 'bg-green-500' : 'bg-[var(--lux-gold)]'}`}
+                                animate={{ width: `${getBookingFinancials(liveSelectedRoom.booking).paidPercent}%` }}
+                                className={`h-full rounded-full ${getBookingFinancials(liveSelectedRoom.booking).balance <= 0 ? 'bg-green-500' : 'bg-[var(--lux-gold)]'}`}
                               />
                            </div>
                         </div>
                       </div>
 
                       {/* Functional Add Payment Section */}
-                      {selectedRoom.booking.balanceAmount > 0 && (
+                      {getBookingFinancials(liveSelectedRoom.booking).balance > 0 && (
                         <div className="p-5 bg-[var(--lux-card)] rounded-3xl border border-[var(--lux-border)] shadow-xl space-y-4">
                            <div className="flex justify-between items-center">
                               <p className="text-[9px] font-black uppercase text-[var(--lux-gold)] tracking-widest">Settle Balance</p>
@@ -1638,10 +1705,17 @@ const GlobalDashboard = ({ activeHotelId, onHotelChange }: { activeHotelId: stri
                                   if (!offlineAmount || Number(offlineAmount) <= 0) return toast.error("Enter amount");
                                   const tid = toast.loading("Processing...");
                                   try {
-                                    const res = await fetch(`${API_BASE_URL}/api/content/bookings/admin/${selectedRoom.booking._id}`, {
+                                    const res = await fetch(`${API_BASE_URL}/api/content/bookings/admin/${liveSelectedRoom.booking._id}`, {
                                       method: 'PATCH',
                                       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('hotel_token')}` },
-                                      body: JSON.stringify({ paymentUpdate: { amount: Number(offlineAmount), mode: paymentMethod === 'UPI' ? 'UPI' : 'Cash' } })
+                                      body: JSON.stringify({ 
+                                        paymentDetails: { 
+                                          totalAmount: getBookingFinancials(liveSelectedRoom.booking).total,
+                                          paidAmount: getBookingFinancials(liveSelectedRoom.booking).paid + Number(offlineAmount),
+                                          onlinePaid: (Number(liveSelectedRoom.booking.onlinePaid) || 0) + (paymentMethod === 'UPI' ? Number(offlineAmount) : 0),
+                                          offlinePaid: (Number(liveSelectedRoom.booking.offlinePaid) || 0) + (paymentMethod === 'Cash' ? Number(offlineAmount) : 0)
+                                        } 
+                                      })
                                     });
                                     if (res.ok) {
                                       toast.success("Payment Settled", { id: tid });
@@ -1660,21 +1734,21 @@ const GlobalDashboard = ({ activeHotelId, onHotelChange }: { activeHotelId: stri
                       )}
 
                       {/* Checkout Restricted Logic */}
-                      {selectedRoom.booking.balanceAmount > 0 && (
+                      {getBookingFinancials(liveSelectedRoom.booking).balance > 0 && (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-red-500/5 rounded-2xl border border-red-500/20 flex items-center gap-3">
                            <div className="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center text-red-500">
                               <Info size={16} />
                            </div>
                            <p className="text-[8px] font-bold text-red-500 uppercase tracking-widest leading-relaxed">
-                              ⚠️Ã¯Â¸Â Checkout Restricted. Clear ₹{selectedRoom.booking.balanceAmount} balance first.
+                              ⚠️ Checkout Restricted. Clear ₹{getBookingFinancials(liveSelectedRoom.booking).balance} balance first.
                            </p>
                         </motion.div>
                       )}
 
                       <div className="grid grid-cols-2 gap-3 pt-2">
                         <button 
-                          onClick={() => setShowInvoice(selectedRoom.booking)}
-                          className={`py-4 bg-black text-white rounded-2xl text-[9px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all flex items-center justify-center gap-2 shadow-xl border border-white/10 ${selectedRoom.booking.balanceAmount > 0 ? 'opacity-30 cursor-not-allowed' : ''}`}
+                          onClick={() => setShowInvoice(liveSelectedRoom.booking)}
+                          className={`py-4 bg-black text-white rounded-2xl text-[9px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all flex items-center justify-center gap-2 shadow-xl border border-white/10 ${getBookingFinancials(liveSelectedRoom.booking).balance > 0 ? 'opacity-30 cursor-not-allowed' : ''}`}
                         >
                           <FileText size={14} /> Bill Preview
                         </button>
@@ -1687,19 +1761,46 @@ const GlobalDashboard = ({ activeHotelId, onHotelChange }: { activeHotelId: stri
                       </div>
 
                       <button 
-                        disabled={selectedRoom.booking.balanceAmount > 0}
+                        disabled={getBookingFinancials(liveSelectedRoom.booking).balance > 0}
                         onClick={() => setShowCheckoutConfirm(true)}
                         className={`w-full py-5 rounded-3xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-xl ${
-                          selectedRoom.booking.balanceAmount > 0 
+                          getBookingFinancials(liveSelectedRoom.booking).balance > 0 
                             ? 'bg-[var(--lux-glass)] text-[var(--lux-muted)] cursor-not-allowed border border-white/5 opacity-50' 
                             : 'bg-red-500 text-white hover:bg-red-600 shadow-[0_10px_30px_rgba(239,68,68,0.2)]'
                         }`}
                       >
                         <LogOut size={18} />
-                        <span>{selectedRoom.booking.balanceAmount > 0 ? 'Payment Pending' : 'Check-out Guest'}</span>
+                        <span>{getBookingFinancials(liveSelectedRoom.booking).balance > 0 ? 'Payment Pending' : 'Check-out Guest'}</span>
                       </button>
                     </div>
-                 ) : (
+                  ) : liveSelectedRoom?.status === 'Dirty' ? (
+                    <div className="space-y-8 text-center py-6">
+                       <div className="w-24 h-24 rounded-full bg-[var(--lux-dirty)]/10 flex items-center justify-center border border-[var(--lux-dirty)]/20 mx-auto lux-glow">
+                          <Brush size={40} className="text-[var(--lux-dirty)]" />
+                       </div>
+                       <div className="space-y-3">
+                          <h3 className="text-3xl font-display font-bold">Needs Cleaning</h3>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-[var(--lux-muted)] max-w-[200px] mx-auto leading-relaxed">This room requires inspection and cleaning before it can be released.</p>
+                       </div>
+                       <button onClick={() => handleUpdateRoomStatus(liveSelectedRoom.number, 'Cleaning')} className="w-full btn-premium py-5 flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl shadow-[var(--lux-dirty)]/10">
+                          <Play size={18} /> START CLEANING
+                       </button>
+                    </div>
+                  ) : liveSelectedRoom?.status === 'Cleaning' ? (
+                    <div className="space-y-8 text-center py-6">
+                       <div className="w-24 h-24 rounded-full bg-[var(--lux-warning)]/10 flex items-center justify-center border border-[var(--lux-warning)]/20 mx-auto lux-glow">
+                          <Loader2 size={40} className="text-[var(--lux-warning)] animate-spin" />
+                       </div>
+                       <div className="space-y-3">
+                          <h3 className="text-3xl font-display font-bold">In Progress...</h3>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-[var(--lux-muted)] max-w-[200px] mx-auto leading-relaxed">The housekeeping team is currently preparing this room.</p>
+                       </div>
+                       <button onClick={() => handleUpdateRoomStatus(liveSelectedRoom.number, 'Available')} className="w-full btn-premium py-5 flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl shadow-[var(--lux-warning)]/10">
+                          <CheckCircle size={18} /> MARK AS CLEAN
+                       </button>
+                    </div>
+                  ) : (
+
                    <>
                      {/* CHECK-IN FORM (Old View) */}
                      <div className="space-y-6">
@@ -2062,10 +2163,11 @@ const ReceptionConsole = ({ activeHotelId, onHotelChange }: { activeHotelId: str
         const isSpecificallyBooked = currentBooking && (new Date(currentBooking.checkin) < end && new Date(currentBooking.checkout) > start);
         const isOccupied = isSpecificallyBooked || (availabilityMap.occupied || []).includes(num);
         const isBlocked = manualStatus?.status === 'Maintenance' || manualStatus?.status === 'Blocked' || (availabilityMap.blocked || []).includes(num);
-        let status: 'Available' | 'Booked' | 'Cleaning' | 'Maintenance' = 'Available';
+        let status: 'Available' | 'Booked' | 'Cleaning' | 'Maintenance' | 'Dirty' = 'Available';
         if (isBlocked) status = 'Maintenance';
-        else if (manualStatus?.status === 'Cleaning') status = 'Cleaning';
         else if (isOccupied) status = 'Booked';
+        else if (manualStatus?.status === 'Cleaning') status = 'Cleaning';
+        else if (manualStatus?.status === 'Dirty') status = 'Dirty';
         else if (unassignedToMap[roomType.id] > 0) { status = 'Booked'; unassignedToMap[roomType.id]--; }
         generated.push({ number: num, type: roomType.type, price: roomType.price, roomId: roomType.id, status, guestData: isSpecificallyBooked ? currentBooking?.guestDetails : null, manualData: manualStatus });
       }
@@ -2183,7 +2285,7 @@ const ReceptionConsole = ({ activeHotelId, onHotelChange }: { activeHotelId: str
            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--lux-muted)]">Reception Management Hub</p>
         </div>
         
-        <div className="flex items-center gap-2 p-1.5 bg-white rounded-xl border border-[var(--lux-border)] shadow-sm">
+        <div className="flex items-center gap-2 p-1.5 bg-[var(--lux-card)] rounded-xl border border-[var(--lux-border)] shadow-sm">
           {[{ id: 'dashboard', label: 'Ledger', icon: LayoutGrid }, { id: 'form', label: 'Check-in', icon: UserPlus }].map((v) => (
             <button key={v.id} onClick={() => setActiveView(v.id as any)} className={`px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeView === v.id ? 'bg-[var(--lux-gold)] text-white' : 'text-[var(--lux-muted)] hover:bg-[var(--lux-bg)]'}`}>
               <span className="flex items-center gap-2"><v.icon size={12} /> {v.label}</span>
@@ -2288,7 +2390,7 @@ const ReceptionConsole = ({ activeHotelId, onHotelChange }: { activeHotelId: str
 
                 {/* Desktop Submission */}
                 <div className="hidden md:block pt-10">
-                   <button onClick={handleWalkInSubmit} disabled={isSubmitting || !formData.name || !formData.phone} className="w-full h-14 bg-[var(--lux-gold)] text-white rounded-xl font-black uppercase tracking-widest text-[13px] hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50">
+                   <button onClick={handleWalkInSubmit} disabled={isSubmitting || !formData.name || !formData.phone} className="w-full h-14 btn-premium disabled:opacity-50">
                       {isSubmitting ? 'Confirming...' : 'Confirm Check-in'}
                    </button>
                 </div>
@@ -2562,9 +2664,9 @@ const BookingsManagement = ({ activeHotelId }: { activeHotelId: string }) => {
                        </td>
                        <td>
                           <div className="text-right inline-block">
-                             <p className="font-bold">₹{b.totalAmount}</p>
-                             <p className={`text-[8px] font-black uppercase ${b.balanceAmount > 0 ? 'text-red-500' : 'text-green-500'}`}>
-                                {b.balanceAmount > 0 ? `Unpaid: ₹${b.balanceAmount}` : 'Paid In Full'}
+                             <p className="font-bold">₹{getBookingFinancials(b).total}</p>
+                             <p className={`text-[8px] font-black uppercase ${getBookingFinancials(b).balance > 0 ? 'text-red-500' : 'text-green-500'}`}>
+                                {getBookingFinancials(b).balance > 0 ? `Unpaid: ₹${getBookingFinancials(b).balance}` : 'Paid In Full'}
                              </p>
                           </div>
                        </td>
@@ -2688,7 +2790,7 @@ const AppContent = () => {
   const [authState, setAuthState] = useState<'selecting' | 'logging-in' | 'authenticated'>(
     (localStorage.getItem('hotel_token') && localStorage.getItem('hotelId')) ? 'authenticated' : 'selecting'
   );
-  const [activeTab, setActiveTab] = useState('dashboard');
+
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeHotelId, setActiveHotelId] = useState<string>(localStorage.getItem('hotelId') || "");
@@ -2716,7 +2818,8 @@ const AppContent = () => {
   }, [allBookings]);
 
   useEffect(() => {
-    document.documentElement.classList.toggle('light', theme === 'light');
+    document.documentElement.classList.remove('light');
+    if (theme === 'light') document.documentElement.classList.add('light');
     localStorage.setItem('theme', theme);
   }, [theme]);
 
@@ -2752,12 +2855,11 @@ const AppContent = () => {
   return (
     <div className="flex min-h-screen bg-[var(--lux-bg)] transition-colors duration-500">
       <Sidebar 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
         isOpen={isSidebarOpen} 
         setIsOpen={setIsSidebarOpen} 
         onLogout={handleLogout}
       />
+
       
       <div className="flex-1 lg:ml-[280px] flex flex-col min-h-screen">
         <Header 
@@ -2771,58 +2873,36 @@ const AppContent = () => {
         
         <main className="flex-1 p-3 md:p-8 lg:p-10 overflow-y-auto pb-24 lg:pb-10">
           <div className="max-w-[1440px] mx-auto">
-            <AnimatePresence mode="wait">
-              {activeTab === 'dashboard' && (
-                <motion.div
-                  key="dashboard"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.3 }}
-                >
+            <Routes>
+              {/* ROOT REDIRECT */}
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+              {/* DASHBOARD ROUTE */}
+              <Route path="/dashboard" element={
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
                   <GlobalDashboard activeHotelId={activeHotelId} onHotelChange={setActiveHotelId} />
                 </motion.div>
-              )}
+              } />
 
-              {activeTab === 'reception' && (
-                <motion.div
-                  key="reception"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.3 }}
-                >
+              {/* RECEPTION ROUTE */}
+              <Route path="/reception" element={
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
                   <ReceptionConsole activeHotelId={activeHotelId} onHotelChange={setActiveHotelId} />
                 </motion.div>
-              )}
+              } />
 
-              {activeTab === 'bookings' && (
-                <motion.div
-                  key="bookings"
-                  initial={{ opacity: 0, scale: 0.98 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 1.02 }}
-                  transition={{ duration: 0.3 }}
-                >
+              {/* BOOKINGS ROUTE */}
+              <Route path="/bookings" element={
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
                   <BookingsManagement activeHotelId={activeHotelId} />
                 </motion.div>
-              )}
-              
-              {activeTab !== 'dashboard' && activeTab !== 'reception' && activeTab !== 'bookings' && (
-                <motion.div
-                  key="placeholder"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex flex-col items-center justify-center h-[70vh] text-center"
-                >
-                  <div className="w-20 h-20 bg-[var(--lux-glass)] rounded-full flex items-center justify-center mb-6 border border-[var(--lux-border)]">
-                     <Sparkles size={40} className="text-[var(--lux-gold)] opacity-20" />
-                  </div>
-                  <h2 className="text-2xl font-display font-bold mb-2 uppercase tracking-tighter">{SIDEBAR_ITEMS.find(i => i.id === activeTab)?.label}</h2>
-                  <p className="text-[var(--lux-muted)] text-[8px] uppercase font-black tracking-widest leading-relaxed">Enterprise module under development</p>
-                </motion.div>
-              )}
-            </AnimatePresence>
+              } />
+
+              {/* PLACEHOLDER ROUTES */}
+              <Route path="/guests" element={<ModulePlaceholder title="Guests Management" />} />
+              <Route path="/rooms" element={<ModulePlaceholder title="Inventory & Configuration" />} />
+            </Routes>
+
           </div>
         </main>
 
@@ -2831,6 +2911,19 @@ const AppContent = () => {
     </div>
   );
 };
+const ModulePlaceholder = ({ title }: { title: string }) => (
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    className="flex flex-col items-center justify-center h-[70vh] text-center"
+  >
+    <div className="w-20 h-20 bg-[var(--lux-glass)] rounded-full flex items-center justify-center mb-6 border border-[var(--lux-border)]">
+       <Sparkles size={40} className="text-[var(--lux-gold)] opacity-20" />
+    </div>
+    <h2 className="text-2xl font-display font-bold mb-2 uppercase tracking-tighter">{title}</h2>
+    <p className="text-[var(--lux-muted)] text-[8px] uppercase font-black tracking-widest leading-relaxed">Enterprise module under development. Architecting next release.</p>
+  </motion.div>
+);
 
 // --- MINIMALIST UI UTILITIES ---
 
@@ -2999,11 +3092,14 @@ const NormalUploader = ({ label, value, onChange }: any) => (
 
 const App = () => {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AppContent />
-      <Toaster position="top-right" richColors theme="dark" />
-    </QueryClientProvider>
+    <BrowserRouter>
+      <QueryClientProvider client={queryClient}>
+        <AppContent />
+        <Toaster position="top-right" richColors theme="dark" />
+      </QueryClientProvider>
+    </BrowserRouter>
   );
 };
+
 
 export default App;

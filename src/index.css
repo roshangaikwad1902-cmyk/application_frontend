@@ -6,25 +6,79 @@
 
 @layer base {
   :root {
-    --lux-bg: #F1F5F9;
-    --lux-card: #FFFFFF;
-    --lux-border: #E2E8F0;
-    --lux-text: #0F172A;
-    --lux-muted: #475569;
-    --lux-gold: #C6A769;
-    --lux-glass: rgba(255, 255, 255, 0.8);
+    /* DARK THEME (Default) */
+    --lux-bg: #0E0E0E;
+    --lux-card: #121212; /* Updated to match sidebar spec */
+    --lux-soft: #1E1E1E;
+    --lux-text: #FFFFFF;
+    --lux-muted: #A1A1AA;
+    --lux-border: #2A2A2A;
+    --lux-gold: #D4AF37;
+    --lux-gold-light: #F5D97B;
+
+    /* Status */
+    --lux-success: #22C55E;
+    --lux-danger: #EF4444;
+    --lux-warning: #FACC15;
+    --lux-dirty: #795548;
+
     --font-display: 'Outfit', sans-serif;
     --font-body: 'Inter', sans-serif;
   }
 
   :root.light {
-    --lux-bg: #F8FAFC;
+    --lux-bg: #F8F6F2;
     --lux-card: #FFFFFF;
-    --lux-gold: #A6864A; /* Sharper gold for light background contrast */
-    --lux-border: #E2E8F0;
-    --lux-text: #0F172A;
-    --lux-muted: #475569; /* Darker muted text for better readability */
-    --lux-glass: rgba(0, 0, 0, 0.05);
+    --lux-soft: #F1EEE9;
+    --lux-text: #1C1C1C;
+    --lux-muted: #6B7280;
+    --lux-border: #E5E7EB;
+    --lux-gold: #C8A96A;
+    --lux-gold-light: #E6D3A3;
+
+    --lux-success: #22C55E;
+    --lux-danger: #EF4444;
+    --lux-warning: #F59E0B;
+    --lux-dirty: #8D6E63;
+  }
+
+  /* Room Card Premium Styles */
+  .room-card-available {
+    background: rgba(34, 197, 94, 0.08) !important;
+    border: 1px solid var(--lux-success) !important;
+  }
+  .room-card-booked {
+    background: rgba(239, 68, 68, 0.1) !important;
+    border: 1px solid var(--lux-danger) !important;
+  }
+  .room-card-cleaning {
+    background: rgba(250, 204, 21, 0.12) !important;
+    border: 1px solid var(--lux-warning) !important;
+  }
+  .room-card-dirty {
+    background: rgba(121, 85, 72, 0.15) !important;
+    border: 1px solid var(--lux-dirty) !important;
+  }
+  .room-card-selected {
+    background: var(--lux-gold) !important;
+    color: black !important;
+    border: 1px solid var(--lux-gold) !important;
+  }
+
+  /* Premium Button */
+  .btn-premium {
+    background: linear-gradient(135deg, #C8A96A, #D4AF37) !important;
+    color: black !important;
+    border-radius: 10px !important;
+    font-weight: 700 !important;
+    transition: all 0.3s ease !important;
+  }
+  .btn-premium:hover {
+    box-shadow: 0 8px 20px rgba(212, 175, 55, 0.3) !important;
+    transform: translateY(-1px);
+  }
+  .btn-premium:active {
+    transform: translateY(0);
   }
 
   body {
@@ -53,11 +107,11 @@
 
   /* --- NORMAL UTILITY STYLES --- */
   .normal-card {
-    @apply bg-white border border-[var(--lux-border)] rounded-xl p-6 shadow-sm;
+    @apply bg-[var(--lux-card)] border border-[var(--lux-border)] rounded-xl p-6 shadow-sm;
   }
 
   .normal-input {
-    @apply w-full h-10 px-4 bg-white border border-[var(--lux-border)] rounded-lg text-sm font-medium focus:border-[var(--lux-gold)] focus:ring-1 focus:ring-[rgba(198,167,105,0.2)] outline-none transition-all text-[var(--lux-text)];
+    @apply w-full h-10 px-4 bg-[var(--lux-card)] border border-[var(--lux-border)] rounded-lg text-sm font-medium focus:border-[var(--lux-gold)] focus:ring-1 focus:ring-[rgba(198,167,105,0.2)] outline-none transition-all text-[var(--lux-text)];
   }
 
   .normal-input::placeholder {
