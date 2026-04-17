@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { UploadCloud, Loader2, X } from 'lucide-react';
-import { API_BASE_URL } from '../../config/api';
+import { API_BASE_URL } from '../../config/constants';
 
 interface ImageUploadProps {
     value: string;
