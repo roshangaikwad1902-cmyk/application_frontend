@@ -13,10 +13,12 @@ import {
   Receipt,
   Sparkles,
   Plus,
-  Shield,
-  ArrowRightCircle,
-  ArrowRight,
-  Clock
+  LayoutGrid,
+  Shield, 
+  ArrowRightCircle, 
+  ArrowRight, 
+  Clock,
+  Printer
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -39,8 +41,15 @@ export const FutureBookingPage = ({ activeHotelId, onSlipClick }: any) => {
   const { data: allHotels = [], isLoading: loadingHotels } = useHotelsList();
   
   // 1. Core State
-  const [targetDate, setTargetDate] = useState(new Date(Date.now() + 172800000).toISOString().split('T')[0]); // Default +2 days
-  const [checkoutDate, setCheckoutDate] = useState(new Date(Date.now() + 259200000).toISOString().split('T')[0]); // Default +3 days
+  const getLocalDateStr = (offsetDays = 0) => {
+    const d = new Date();
+    if (offsetDays) d.setDate(d.getDate() + offsetDays);
+    return d.toLocaleDateString('en-CA');
+  };
+
+  // 1. Core State
+  const [targetDate, setTargetDate] = useState(getLocalDateStr(2)); // Default +2 days
+  const [checkoutDate, setCheckoutDate] = useState(getLocalDateStr(3)); // Default +3 days
   const [selectedRoom, setSelectedRoom] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -50,6 +59,7 @@ export const FutureBookingPage = ({ activeHotelId, onSlipClick }: any) => {
     name: '', phone: '', email: '',
     offlinePaid: 0, onlinePaid: 0, 
     paymentMethod: 'UPI',
+    bookingSource: 'walk_in', bookingPlatform: '', otaPaymentType: 'pay_at_hotel',
     guests: 1
   });
 
@@ -117,10 +127,22 @@ export const FutureBookingPage = ({ activeHotelId, onSlipClick }: any) => {
 
   // Financials
   const financials = useMemo(() => {
-    const total = selectedRoom?.price || 0;
-    const paid = Number(formData.offlinePaid || 0) + Number(formData.onlinePaid || 0);
-    return { total, paid, balance: total - paid };
-  }, [selectedRoom, formData.offlinePaid, formData.onlinePaid]);
+    // Priority: Actual booking data > UI room price
+    const unitPrice = selectedRoom?.price || 0;
+    const total = selectedRoom?.booking?.totalAmount ?? unitPrice;
+    
+    const isOtaPaid = formData.bookingSource?.toLowerCase() === 'ota' && formData.otaPaymentType === 'paid_online';
+    
+    // For existing reservations, use the actual paid amount from the record
+    let paid = 0;
+    if (selectedRoom?.status === 'Reserved' && selectedRoom?.booking) {
+      paid = Number(selectedRoom.booking.paidAmount) || 0;
+    } else {
+      paid = isOtaPaid ? total : (Number(formData.offlinePaid || 0) + Number(formData.onlinePaid || 0));
+    }
+
+    return { total, paid, balance: Math.max(0, total - paid) };
+  }, [selectedRoom, formData.offlinePaid, formData.onlinePaid, formData.bookingSource, formData.otaPaymentType]);
 
   // Auto-fill Logic
   useEffect(() => {
@@ -130,12 +152,31 @@ export const FutureBookingPage = ({ activeHotelId, onSlipClick }: any) => {
         .then(data => {
           if (data && data.length > 0) {
             const guest = data[0];
-            setFormData(prev => ({ ...prev, name: guest.name, email: guest.email || '' }));
+            setFormData(prev => ({ 
+              ...prev, 
+              name: guest.name, 
+              email: guest.email || '',
+              bookingSource: guest.bookingSource || 'walk_in',
+              bookingPlatform: guest.bookingPlatform || '',
+              otaPaymentType: guest.otaPaymentType || 'pay_at_hotel'
+            }));
             toast.info(`Returning Guest: ${guest.name}`);
           }
         });
     }
   }, [formData.phone]);
+
+  // Handle OTA Payment Logic for Future Bookings
+  useEffect(() => {
+    if (formData.bookingSource === 'ota' && formData.otaPaymentType === 'paid_online') {
+      setFormData(prev => ({
+        ...prev,
+        offlinePaid: 0,
+        onlinePaid: 0
+      }));
+    }
+  }, [formData.bookingSource, formData.otaPaymentType]);
+
 
   const handleBookingSubmit = async () => {
     if (!selectedRoom || !formData.name || !formData.phone) return toast.error("Complete Mandatory Fields");
@@ -156,10 +197,13 @@ export const FutureBookingPage = ({ activeHotelId, onSlipClick }: any) => {
         },
         paymentDetails: {
           totalAmount: financials.total,
-          paidAmount: financials.paid,
+          paidAmount: formData.bookingSource === 'ota' && formData.otaPaymentType === 'paid_online' ? Number(financials.total) : financials.paid,
           offlinePaid: Number(formData.offlinePaid),
           onlinePaid: Number(formData.onlinePaid),
-          paymentMethod: formData.paymentMethod
+          paymentMethod: formData.paymentMethod,
+          bookingSource: formData.bookingSource,
+          bookingPlatform: formData.bookingPlatform,
+          otaPaymentType: formData.otaPaymentType
         },
         status: 'reserved'
       };
@@ -175,7 +219,7 @@ export const FutureBookingPage = ({ activeHotelId, onSlipClick }: any) => {
         toast.success("FUTURE RESERVATION CONFIRMED", { id: tid });
         onSlipClick(data.booking);
         queryClient.invalidateQueries({ queryKey: ['availability'] });
-        setFormData({ name: '', phone: '', email: '', offlinePaid: 0, onlinePaid: 0, paymentMethod: 'UPI', guests: 1 });
+        setFormData({ name: '', phone: '', email: '', offlinePaid: 0, onlinePaid: 0, paymentMethod: 'UPI', bookingSource: 'walk_in', bookingPlatform: '', otaPaymentType: 'pay_at_hotel', guests: 1 });
         setSelectedRoom(null);
       } else throw new Error("Manifest creation failed");
     } catch (err: any) {
@@ -184,13 +228,13 @@ export const FutureBookingPage = ({ activeHotelId, onSlipClick }: any) => {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-12 pb-20">
+    <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 pb-32 lg:pb-20">
       {/* 1. Left - Grid Side */}
-      <div className="flex-1 space-y-12">
-        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8">
-           <div className="flex flex-col gap-2">
-              <h2 className="text-4xl font-display font-black flex items-center gap-4">
-                 <Sparkles className="text-[var(--lux-gold)]" size={32} /> Future <span className="text-[var(--lux-gold)]">Manifest</span>
+      <div className="flex-1 space-y-8 lg:space-y-12">
+        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 lg:gap-8">
+           <div className="flex flex-col gap-1 lg:gap-2">
+              <h2 className="text-2xl lg:text-4xl font-display font-black flex items-center gap-3 lg:gap-4">
+                 <Sparkles className="text-[var(--lux-gold)]" size={24} /> Future <span className="text-[var(--lux-gold)]">Manifest</span>
               </h2>
               <div className="flex items-center gap-2">
                  <div className="h-1 w-8 bg-[var(--lux-gold)] rounded-full" />
@@ -198,14 +242,14 @@ export const FutureBookingPage = ({ activeHotelId, onSlipClick }: any) => {
               </div>
            </div>
 
-           <div className="flex flex-col sm:flex-row items-center gap-6 w-full xl:w-auto bg-[var(--lux-card)] p-2 rounded-2xl border border-white/5 shadow-inner">
-              <div className="flex items-center gap-4 px-4">
-                <div className="flex flex-col">
+           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-6 w-full xl:w-auto bg-[var(--lux-card)] p-2 rounded-2xl border border-white/5 shadow-inner">
+              <div className="flex items-center justify-between sm:justify-start gap-3 sm:gap-4 px-3 sm:px-4">
+                <div className="flex flex-col flex-1 sm:flex-none">
                   <span className="text-[8px] font-black uppercase opacity-30">Check-In</span>
                   <PremiumDatePicker value={targetDate} onChange={setTargetDate} />
                 </div>
-                <ArrowRight size={14} className="opacity-20 mt-4" />
-                <div className="flex flex-col">
+                <ArrowRight size={14} className="opacity-20 mt-3 sm:mt-4 shrink-0" />
+                <div className="flex flex-col flex-1 sm:flex-none">
                   <span className="text-[8px] font-black uppercase opacity-30">Check-Out</span>
                   <PremiumDatePicker value={checkoutDate} onChange={setCheckoutDate} />
                 </div>
@@ -214,30 +258,30 @@ export const FutureBookingPage = ({ activeHotelId, onSlipClick }: any) => {
         </div>
 
         <div className="relative group w-full">
-           <Search size={18} className="absolute left-6 top-1/2 -translate-y-1/2 text-[var(--lux-muted)] group-focus-within:text-[var(--lux-gold)] transition-colors" />
+           <Search size={16} className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 text-[var(--lux-muted)] group-focus-within:text-[var(--lux-gold)] transition-colors" />
            <input 
-             type="text" placeholder="Search manifest by type or unit number..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-             className="w-full h-14 bg-[var(--lux-card)] border border-white/5 rounded-2xl pl-16 pr-6 text-[14px] font-bold outline-none focus:border-[var(--lux-gold)] transition-all shadow-inner placeholder:text-white/10" 
+             type="text" placeholder="Search by type or room number..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+             className="w-full h-12 sm:h-14 bg-[var(--lux-card)] border border-white/5 rounded-2xl pl-12 sm:pl-16 pr-4 sm:pr-6 text-[13px] font-bold outline-none focus:border-[var(--lux-gold)] transition-all shadow-inner placeholder:text-white/10" 
            />
         </div>
 
-        <div className="space-y-16">
+        <div className="space-y-10 lg:space-y-16">
            {Object.entries(groupedRooms).map(([type, rms], typeIdx) => (
              <motion.div 
                key={type} 
                initial={{ opacity: 0, y: 20 }}
                animate={{ opacity: 1, y: 0 }}
                transition={{ delay: typeIdx * 0.1 }}
-               className="space-y-10"
+               className="space-y-6 lg:space-y-10"
              >
-                <div className="flex items-center gap-6">
-                  <div className="py-2 px-5 bg-[var(--lux-gold)]/5 rounded-xl border border-[var(--lux-gold)]/10">
-                    <h3 className="text-[12px] font-black uppercase tracking-[0.4em] text-[var(--lux-gold)] whitespace-nowrap">{type}</h3>
+                <div className="flex items-center gap-4 lg:gap-6">
+                  <div className="py-1.5 px-4 lg:py-2 lg:px-5 bg-[var(--lux-gold)]/5 rounded-xl border border-[var(--lux-gold)]/10">
+                    <h3 className="text-[10px] lg:text-[12px] font-black uppercase tracking-[0.4em] text-[var(--lux-gold)] whitespace-nowrap">{type}</h3>
                   </div>
                   <div className="h-px flex-1 bg-gradient-to-r from-[var(--lux-gold)]/20 to-transparent"></div>
                 </div>
                 
-                <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-8">
                   {rms.map((room, i) => {
                     const isActive = selectedRoom?.number === room.number;
                     const statusColors: any = {
@@ -252,28 +296,55 @@ export const FutureBookingPage = ({ activeHotelId, onSlipClick }: any) => {
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: (typeIdx * 0.1) + (i * 0.05) }}
-                        whileHover={room.status === 'Available' ? { y: -5, scale: 1.02 } : {}}
-                        whileTap={room.status === 'Available' ? { scale: 0.95 } : {}}
-                        onClick={() => room.status === 'Available' && setSelectedRoom(room)}
-                        className={`room-box-saas p-0 border-[1.5px] ${isActive ? 'ring-2 ring-[var(--lux-gold)] ring-offset-4 ring-offset-black shadow-2xl !bg-[#D4AF37] !text-black !border-transparent' : statusColors[room.status]}`}
+                        whileHover={room.status === 'Available' || room.status === 'Reserved' ? { y: -5, scale: 1.02 } : {}}
+                        whileTap={room.status === 'Available' || room.status === 'Reserved' ? { scale: 0.95 } : {}}
+                        onClick={() => {
+                           setSelectedRoom(room);
+                           if (room.status === 'Reserved' && room.booking) {
+                              const b = room.booking;
+                              const p = b.paymentDetails || {};
+                              setFormData({
+                                 name: b.guestDetails?.name || '',
+                                 phone: b.guestDetails?.phone || '',
+                                 email: b.guestDetails?.email || '',
+                                 // Smart mapping: if breakdown is missing, use total paidAmount as offline fallback for display
+                                 offlinePaid: p.offlinePaid ?? (p.onlinePaid ? 0 : (b.paidAmount || 0)),
+                                 onlinePaid: p.onlinePaid || 0,
+                                 paymentMethod: p.paymentMethod || 'UPI',
+                                 bookingSource: p.bookingSource || 'walk_in',
+                                 bookingPlatform: p.bookingPlatform || '',
+                                 otaPaymentType: p.otaPaymentType || 'pay_at_hotel',
+                                 guests: b.stayDetails?.guests || 1
+                              });
+                           } else {
+                              setFormData({
+                                 name: '', phone: '', email: '',
+                                 offlinePaid: 0, onlinePaid: 0, 
+                                 paymentMethod: 'UPI',
+                                 bookingSource: 'walk_in', bookingPlatform: '', otaPaymentType: 'pay_at_hotel',
+                                 guests: 1
+                              });
+                           }
+                        }}
+                        className={`room-box-saas p-0 border-[1.5px] min-w-0 w-full ${isActive ? 'ring-2 ring-[var(--lux-gold)] ring-offset-2 lg:ring-offset-4 ring-offset-black shadow-2xl !bg-[#D4AF37] !text-black !border-transparent' : statusColors[room.status]}`}
                       >
-                         <div className="h-full flex flex-col justify-between p-6 relative">
+                         <div className="h-full flex flex-col justify-between p-3 sm:p-5 lg:p-6 relative overflow-hidden">
                             {/* Status Dot */}
                             <div className={`absolute top-4 right-4 ${room.status === 'Reserved' ? 'pulse-green' : ''}`}>
                                <div className={`${room.status === 'Available' ? 'dot-available' : 'dot-booked'}`} />
                             </div>
 
                             {/* Header row */}
-                            <div className="flex flex-col">
-                               <span className={`text-[9px] font-black uppercase tracking-widest opacity-40 leading-none mb-1 ${isActive ? 'text-black' : ''}`}>UNIT REGISTRY</span>
-                               <span className={`text-[13px] font-bold leading-none ${isActive ? 'text-black' : ''}`}>#{room.number}</span>
-                            </div>
+                             <div className="flex flex-col">
+                                <span className={`text-[7px] sm:text-[9px] font-black uppercase tracking-widest opacity-40 leading-none mb-1 ${isActive ? 'text-black' : ''}`}>UNIT REGISTRY</span>
+                                <span className={`text-[11px] sm:text-[13px] font-bold leading-none ${isActive ? 'text-black' : ''}`}>#{room.number}</span>
+                             </div>
 
-                            {/* Body row: Large Number & Price */}
-                            <div className="flex flex-col items-center justify-center -translate-y-2">
-                               <h4 className={`text-[48px] font-display font-black leading-none tracking-tighter ${isActive ? 'text-black' : ''}`}>{room.number}</h4>
-                               <p className={`text-[12px] font-black uppercase tracking-[0.2em] opacity-40 mt-1 ${isActive ? 'text-black/60' : ''}`}>₹{room.price}</p>
-                            </div>
+                             {/* Body row: Large Number & Price */}
+                             <div className="flex flex-col items-center justify-center -translate-y-1 sm:-translate-y-2">
+                                <h4 className={`text-[32px] sm:text-[40px] lg:text-[48px] font-display font-black leading-none tracking-tighter ${isActive ? 'text-black' : ''}`}>{room.number}</h4>
+                                <p className={`text-[10px] sm:text-[12px] font-black uppercase tracking-[0.2em] opacity-40 mt-1 ${isActive ? 'text-black/60' : ''}`}>₹{room.price}</p>
+                             </div>
 
                              {/* Footer row: Manifest Info */}
                              <div className={`pt-4 border-t flex flex-col gap-0.5 ${isActive ? 'border-black/10' : 'border-black/5'}`}>
@@ -314,31 +385,47 @@ export const FutureBookingPage = ({ activeHotelId, onSlipClick }: any) => {
       </div>
 
       {/* 2. Right - Booking Drawer */}
-      <div className="w-full lg:w-[450px]">
-        <div className="sticky top-28 space-y-8">
+      {/* Mobile: fixed overlay bottom sheet. Desktop: sticky side column */}
+      <div className={`
+        fixed inset-x-0 bottom-0 z-[60] lg:relative lg:inset-auto lg:z-auto
+        lg:w-[450px] transition-transform duration-500
+        ${selectedRoom ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}
+      `}>
+        <div className="lg:sticky lg:top-28 space-y-8">
            <AnimatePresence mode="wait">
              {selectedRoom ? (
                <motion.div 
                  key="form"
-                 initial={{ opacity: 0, x: 20 }}
-                 animate={{ opacity: 1, x: 0 }}
-                 exit={{ opacity: 0, x: 20 }}
-                 className="lux-glass-premium rounded-[3rem] overflow-hidden shadow-2xl border border-white/5"
+                 initial={{ opacity: 0, y: 40 }}
+                 animate={{ opacity: 1, y: 0 }}
+                 exit={{ opacity: 0, y: 40 }}
+                 className="lux-glass-premium rounded-t-[3rem] lg:rounded-[3rem] overflow-hidden shadow-2xl border border-white/5 max-h-[85vh] lg:max-h-none overflow-y-auto"
                >
-                  <div className="p-10 border-b border-white/5 bg-white/[0.02] flex justify-between items-center">
+                  <div className="p-6 lg:p-10 border-b border-white/5 bg-white/[0.02] flex justify-between items-center">
                      <div>
-                        <div className="flex items-center gap-3 mb-2">
+                        <div className="flex items-center gap-3 mb-1 lg:mb-2">
                            <div className="w-2 h-2 rounded-full bg-[var(--lux-gold)] animate-pulse shadow-[0_0_10px_var(--lux-gold)]" />
-                           <h3 className="font-display font-black text-2xl uppercase tracking-tighter">Manifest <span className="text-[var(--lux-gold)]">Authorization</span></h3>
+                           <h3 className="font-display font-black text-lg lg:text-2xl uppercase tracking-tighter">Manifest <span className="text-[var(--lux-gold)]">{selectedRoom.status === 'Reserved' ? 'Registry' : 'Authorization'}</span></h3>
                         </div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40">Allocating Unit #{selectedRoom?.number}</p>
+                        <p className="text-[9px] lg:text-[10px] font-black uppercase tracking-[0.3em] opacity-40">{selectedRoom.status === 'Reserved' ? 'Secured Registry' : 'Allocating Unit'} #{selectedRoom?.number}</p>
                      </div>
-                     <button onClick={() => setSelectedRoom(null)} className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center hover:bg-red-500/20 hover:text-red-500 transition-all">
-                       <Plus size={20} className="rotate-45" />
-                     </button>
+                     <div className="flex items-center gap-3">
+                        {selectedRoom.status === 'Reserved' && (
+                           <button 
+                             onClick={() => onSlipClick(selectedRoom.booking)}
+                             className="w-12 h-12 rounded-2xl bg-[var(--lux-gold)]/10 text-[var(--lux-gold)] flex items-center justify-center hover:bg-[var(--lux-gold)] hover:text-black transition-all border border-[var(--lux-gold)]/20 shadow-xl"
+                             title="Print Booking Slip"
+                           >
+                              <Printer size={18} />
+                           </button>
+                        )}
+                        <button onClick={() => setSelectedRoom(null)} className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center hover:bg-red-500/20 hover:text-red-500 transition-all">
+                          <Plus size={20} className="rotate-45" />
+                        </button>
+                     </div>
                   </div>
 
-                  <div className="p-10 space-y-12">
+                  <div className={`p-6 lg:p-10 space-y-8 lg:space-y-12 ${selectedRoom.status === 'Reserved' ? 'pointer-events-none opacity-80' : ''}`}>
                      <div className="space-y-8">
                         <div className="flex items-center gap-3 text-[var(--lux-gold)]">
                            <User size={16} />
@@ -352,19 +439,65 @@ export const FutureBookingPage = ({ activeHotelId, onSlipClick }: any) => {
 
                      <div className="space-y-8">
                         <div className="flex items-center gap-3 text-[var(--lux-gold)]">
+                           <LayoutGrid size={16} />
+                           <h4 className="text-[11px] font-black uppercase tracking-[0.3em]">Manifest Source</h4>
+                        </div>
+                        <div className="flex p-1 bg-black/5 dark:bg-black/20 rounded-xl border border-[var(--lux-border)]">
+                           {[{ id: 'walk_in', label: 'Walk-in' }, { id: 'ota', label: 'OTA' }].map(s => (
+                             <button key={s.id} type="button" onClick={() => setFormData({...formData, bookingSource: s.id as any})} className={`flex-1 py-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${formData.bookingSource === s.id ? 'bg-[var(--lux-gold)] text-black' : 'text-[var(--lux-muted)] hover:text-[var(--lux-text)]'}`}>
+                               {s.label}
+                             </button>
+                           ))}
+                        </div>
+                        
+                        {formData.bookingSource === 'ota' && (
+                          <div className="space-y-5 animate-in slide-in-from-top-2 duration-300">
+                             <NormalSelect 
+                               label="OTA Partner" 
+                               value={formData.bookingPlatform} 
+                               onChange={(v: string) => setFormData({...formData, bookingPlatform: v})} 
+                               options={[
+                                 { value: 'OYO', label: 'OYO' },
+                                 { value: 'GoMMT', label: 'GoMMT' },
+                                 { value: 'Booking.com', label: 'Booking.com' },
+                                 { value: 'Agoda', label: 'Agoda' },
+                                 { value: 'Trivago', label: 'Trivago' },
+                                 { value: 'HotelMate', label: 'HotelMate' }
+                               ]} 
+                             />
+                             <div className="flex gap-2">
+                                {[{ id: 'paid_online', label: 'Pre-Paid Online' }, { id: 'pay_at_hotel', label: 'Pay at Hotel' }].map(p => (
+                                  <button key={p.id} type="button" onClick={() => setFormData({...formData, otaPaymentType: p.id as any})} className={`flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${formData.otaPaymentType === p.id ? 'bg-[var(--lux-gold)]/10 border-[var(--lux-gold)] text-[var(--lux-gold)] shadow-sm' : 'border-[var(--lux-border)] text-[var(--lux-muted)] hover:border-[var(--lux-muted)] hover:text-[var(--lux-text)]'}`}>
+                                    {p.label}
+                                  </button>
+                                ))}
+                             </div>
+                          </div>
+                        )}
+                     </div>
+
+                     <div className="space-y-8">
+                        <div className="flex items-center gap-3 text-[var(--lux-gold)]">
                            <CreditCard size={16} />
                            <h4 className="text-[11px] font-black uppercase tracking-[0.3em]">Advanced Payload</h4>
                         </div>
-                        <div className="grid grid-cols-2 gap-6">
-                           <NormalInput label="Offline Deposit" type="number" value={formData.offlinePaid} onChange={(v: string) => setFormData({...formData, offlinePaid: parseInt(v) || 0})} />
-                           <NormalInput label="Digital Deposit" type="number" value={formData.onlinePaid} onChange={(v: string) => setFormData({...formData, onlinePaid: parseInt(v) || 0})} />
-                        </div>
+                        {!(formData.bookingSource === 'ota' && formData.otaPaymentType === 'paid_online') ? (
+                          <div className="grid grid-cols-2 gap-6">
+                             <NormalInput label="Offline Deposit" type="number" value={formData.offlinePaid} onChange={(v: string) => setFormData({...formData, offlinePaid: parseInt(v) || 0})} />
+                             <NormalInput label="Digital Deposit" type="number" value={formData.onlinePaid} onChange={(v: string) => setFormData({...formData, onlinePaid: parseInt(v) || 0})} />
+                          </div>
+                        ) : (
+                          <div className="p-6 bg-green-500/10 border border-green-500/20 rounded-2xl text-center">
+                             <p className="text-[10px] font-black uppercase tracking-widest text-green-500">Full Value Secured via {formData.bookingPlatform}</p>
+                          </div>
+                        )}
                      </div>
+
 
                      <div className="p-10 bg-black/40 rounded-[2.5rem] border border-white/5 space-y-8">
                         <div className="flex justify-between items-end pb-6 border-b border-white/5">
                            <div>
-                              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--lux-gold)] mb-2">Authorized Advance</p>
+                              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--lux-gold)] mb-2">{selectedRoom.status === 'Reserved' ? 'Amount Secured' : 'Authorized Advance'}</p>
                               <p className="text-4xl font-display font-black">₹{financials.paid}</p>
                            </div>
                            <div className="text-right">
@@ -383,10 +516,10 @@ export const FutureBookingPage = ({ activeHotelId, onSlipClick }: any) => {
 
                      <button 
                        onClick={handleBookingSubmit} 
-                       disabled={isSubmitting || !formData.name || !formData.phone}
+                       disabled={isSubmitting || !formData.name || !formData.phone || selectedRoom.status === 'Reserved'}
                        className="w-full h-20 bg-[var(--lux-gold)] text-black rounded-3xl text-[12px] font-black uppercase tracking-[0.4em] shadow-[0_20px_60px_rgba(212,175,55,0.25)] hover:shadow-[0_25px_70px_rgba(212,175,55,0.35)] hover:-translate-y-1 active:translate-y-0 transition-all disabled:opacity-20 disabled:grayscale"
                      >
-                        {isSubmitting ? 'Architecting...' : 'Authorize Reservation'}
+                        {selectedRoom.status === 'Reserved' ? 'Reservation Secured' : (isSubmitting ? 'Architecting...' : 'Authorize Reservation')}
                      </button>
                   </div>
                </motion.div>
@@ -418,6 +551,13 @@ export const FutureBookingPage = ({ activeHotelId, onSlipClick }: any) => {
            </AnimatePresence>
         </div>
       </div>
-    </div>
+      {/* Mobile backdrop when drawer is open */}
+      {selectedRoom && (
+        <div 
+          className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[55]"
+          onClick={() => setSelectedRoom(null)}
+        />
+      )}
+   </div>
   );
 };

@@ -16,9 +16,10 @@ export const useActiveBookings = (hotelId: string) => useQuery({
       headers: { 'Authorization': `Bearer ${localStorage.getItem('hotel_token')}` }
     });
     const data = await res.json();
-    return data.filter((b: any) => b.hotel_id === hotelId && b.status !== 'completed');
+    return data.filter((b: any) => String(b.hotel_id) === String(hotelId) && b.status !== 'completed');
   },
-  enabled: !!hotelId
+  enabled: !!hotelId,
+  refetchInterval: 15000, // Sync every 15 seconds
 });
 
 export const useRoomStatus = (hotelId: string) => useQuery({
@@ -29,7 +30,8 @@ export const useRoomStatus = (hotelId: string) => useQuery({
     });
     return res.json();
   },
-  enabled: !!hotelId
+  enabled: !!hotelId,
+  refetchInterval: 15000 // Sync every 15 seconds
 });
 
 export const useRoomAvailabilityMap = (hotelId: string, checkin: string, checkout: string) => useQuery({
@@ -38,7 +40,8 @@ export const useRoomAvailabilityMap = (hotelId: string, checkin: string, checkou
     const res = await fetch(`${API_BASE_URL}/api/content/rooms/availability?hotelId=${hotelId}&checkin=${checkin}&checkout=${checkout}`);
     return res.json();
   },
-  enabled: !!hotelId && !!checkin && !!checkout
+  enabled: !!hotelId && !!checkin && !!checkout,
+  refetchInterval: 15000 // Sync every 15 seconds
 });
 
 export const useUnifiedBookings = (activeHotelId: string) => useQuery({
@@ -48,7 +51,8 @@ export const useUnifiedBookings = (activeHotelId: string) => useQuery({
         headers: { 'Authorization': `Bearer ${localStorage.getItem('hotel_token')}` }
       });
       const data = await res.json();
-      return data.filter((b: any) => b.hotel_id === activeHotelId);
+      return data.filter((b: any) => String(b.hotel_id) === String(activeHotelId));
     },
-    enabled: !!activeHotelId
+    enabled: !!activeHotelId,
+    refetchInterval: 15000 // Sync every 15 seconds
   });

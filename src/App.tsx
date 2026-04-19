@@ -19,9 +19,11 @@ import { ReceptionConsole } from './pages/ReceptionPage';
 import { BookingsManagement } from './pages/BookingsPage';
 import { GuestsPage } from './pages/GuestsPage';
 import { FutureBookingPage } from './pages/FutureBookingPage';
+import { RevenuePage } from './pages/RevenuePage';
 // Views
 import { DetailedInvoice } from './views/DetailedInvoice';
 import { BookingReportView } from './views/BookingReportView';
+import { RevenueReportView } from './views/RevenueReportView';
 import { BookingSlip } from './views/BookingSlip';
 
 // Create Query Client
@@ -42,6 +44,7 @@ const AppContent = () => {
   // Print/Preview States
   const [invoiceBooking, setInvoiceBooking] = useState<any>(null);
   const [reportBookings, setReportBookings] = useState<any[] | null>(null);
+  const [revenueReportData, setRevenueReportData] = useState<any | null>(null);
   const [slipBooking, setSlipBooking] = useState<any>(null);
 
   useEffect(() => {
@@ -110,12 +113,22 @@ const AppContent = () => {
     </div>
  );
 
+  if (revenueReportData) return (
+    <div className="print-view-wrapper">
+       <RevenueReportView reportData={revenueReportData} hotel={activeHotel} />
+       <div className="fixed bottom-10 right-10 flex gap-4 no-print z-[1000]">
+          <button onClick={() => setRevenueReportData(null)} className="px-8 py-4 bg-gray-400 text-white rounded-xl font-bold uppercase text-[10px] shadow-xl">Back</button>
+          <button onClick={() => window.print()} className="px-8 py-4 bg-[var(--lux-gold)] text-black rounded-xl font-bold uppercase text-[10px] shadow-xl">Print Report</button>
+       </div>
+    </div>
+ );
+
   if (!activeHotel) return <HotelSelectionPage onSelect={handleHotelSelect} />;
   if (!isAuthenticated) return <LoginPage hotelName={activeHotel.name} hotelId={activeHotel.id} onBack={() => setActiveHotel(null)} onLogin={() => setIsAuthenticated(true)} />;
 
   return (
     <div className="min-h-screen bg-[var(--lux-bg)] text-[var(--lux-text)] selection:bg-[var(--lux-gold)] selection:text-black">
-      <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} onLogout={handleLogout} />
+      <Sidebar theme={theme} isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} onLogout={handleLogout} />
       
       <div className="lg:pl-[280px] min-h-screen transition-all duration-500">
         <Header 
@@ -127,13 +140,13 @@ const AppContent = () => {
           arrivalsCount={arrivalsCount}
         />
 
-        <main className="pt-28 px-6 md:px-10 max-w-7xl mx-auto">
+        <main className="pt-28 px-4 sm:px-6 md:px-10 pb-28 lg:pb-8 max-w-7xl mx-auto">
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route 
                 path="/dashboard" 
-                element={<GlobalDashboard activeHotelId={activeHotel.id} onHotelChange={(id) => handleHotelSelect(id, "")} onWalkInClick={() => navigate('/reception')} />} 
+                element={<GlobalDashboard activeHotelId={activeHotel.id} onHotelChange={(id) => handleHotelSelect(id, "")} onWalkInClick={() => navigate('/reception')} onInvoiceClick={(b: any) => setInvoiceBooking(b)} />} 
               />
               <Route 
                 path="/reception" 
@@ -147,6 +160,10 @@ const AppContent = () => {
               <Route 
                  path="/future-booking" 
                  element={<FutureBookingPage activeHotelId={activeHotel.id} onSlipClick={(b: any) => setSlipBooking(b)} />} 
+               />
+              <Route 
+                 path="/payments" 
+                 element={<RevenuePage activeHotelId={activeHotel.id} onReportClick={(data: any) => setRevenueReportData(data)} />} 
                />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>

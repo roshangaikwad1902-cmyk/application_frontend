@@ -46,8 +46,10 @@ export const PremiumDatePicker: React.FC<DatePickerProps> = ({ value, onChange, 
   const monthName = displayMonth.toLocaleString('default', { month: 'long' });
 
   const handleDateSelect = (day: number) => {
-    const newDate = new Date(displayMonth.getFullYear(), displayMonth.getMonth(), day);
-    onChange(newDate.toISOString().split('T')[0]);
+    const y = displayMonth.getFullYear();
+    const m = (displayMonth.getMonth() + 1).toString().padStart(2, '0');
+    const d = day.toString().padStart(2, '0');
+    onChange(`${y}-${m}-${d}`);
     setIsOpen(false);
   };
 
@@ -81,9 +83,9 @@ export const PremiumDatePicker: React.FC<DatePickerProps> = ({ value, onChange, 
             className="absolute z-[100] top-[calc(100%+10px)] left-0 w-80 bg-[var(--lux-card)] border border-[var(--lux-border)] rounded-3xl shadow-2xl p-6 backdrop-blur-xl"
           >
             <div className="flex items-center justify-between mb-6">
-              <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-white/5 rounded-xl transition-all"><ChevronLeft size={16} /></button>
+              <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-[var(--lux-soft)] rounded-xl transition-all"><ChevronLeft size={16} /></button>
               <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--lux-gold)]">{monthName} {displayMonth.getFullYear()}</h4>
-              <button onClick={() => changeMonth(1)} className="p-2 hover:bg-white/5 rounded-xl transition-all"><ChevronRight size={16} /></button>
+              <button onClick={() => changeMonth(1)} className="p-2 hover:bg-[var(--lux-soft)] rounded-xl transition-all"><ChevronRight size={16} /></button>
             </div>
 
             <div className="grid grid-cols-7 gap-1 text-center mb-2">
@@ -95,12 +97,15 @@ export const PremiumDatePicker: React.FC<DatePickerProps> = ({ value, onChange, 
             <div className="grid grid-cols-7 gap-1">
               {Array.from({ length: firstDay }).map((_, i) => <div key={`empty-${i}`} />)}
               {days.map(d => {
-                const dateStringsMatch = new Date(displayMonth.getFullYear(), displayMonth.getMonth(), d).toISOString().split('T')[0] === value;
+                const year = displayMonth.getFullYear();
+                const month = (displayMonth.getMonth() + 1).toString().padStart(2, '0');
+                const day = d.toString().padStart(2, '0');
+                const dateStringsMatch = `${year}-${month}-${day}` === value;
                 return (
                   <button
                     key={d}
                     onClick={() => handleDateSelect(d)}
-                    className={`h-10 text-[11px] font-bold rounded-xl transition-all flex items-center justify-center ${dateStringsMatch ? 'bg-[var(--lux-gold)] text-black shadow-lg shadow-[var(--lux-gold)]/20 scale-110' : 'hover:bg-white/5 text-white/60 hover:text-white'}`}
+                    className={`h-10 text-[11px] font-bold rounded-xl transition-all flex items-center justify-center ${dateStringsMatch ? 'bg-[var(--lux-gold)] text-black shadow-lg shadow-[var(--lux-gold)]/20 scale-110' : 'hover:bg-[var(--lux-gold)]/10 text-[var(--lux-text)]/60 hover:text-[var(--lux-text)]'}`}
                   >
                     {d}
                   </button>

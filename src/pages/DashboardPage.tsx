@@ -18,7 +18,10 @@ import {
   Eye,
   Receipt,
   Grid,
-  Clock
+  Clock,
+  CheckCircle,
+  Phone,
+  MessageCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -31,93 +34,9 @@ import {
   useRoomAvailabilityMap 
 } from '../hooks/useHotelData';
 
-export const ReceptionSchedule = ({ bookings, activeHotel, onRefresh }: { bookings: any[], activeHotel: any, onRefresh: () => void }) => {
-  const [activeTab, setActiveTab] = useState<'today' | 'tomorrow'>('today');
-  
-  const dashboardBookings = useMemo(() => {
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    return bookings.filter(b => {
-      const bDate = new Date(b.checkin);
-      bDate.setHours(0,0,0,0);
-      return activeTab === 'today' ? bDate.getTime() === today.getTime() : bDate.getTime() === tomorrow.getTime();
-    });
-  }, [bookings, activeTab]);
 
-  return (
-    <div className="bg-[var(--lux-card)] p-6 rounded-[2.5rem] border border-[var(--lux-border)] space-y-10 shadow-2xl relative overflow-hidden group">
-       <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--lux-gold)]/5 rounded-full -mr-32 -mt-32 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
-       
-       <div className="flex flex-col sm:flex-row justify-between items-center gap-8 relative z-10">
-        <div className="flex gap-2 p-1.5 bg-[var(--lux-glass)] rounded-2xl border border-[var(--lux-border)] shadow-inner">
-          <button 
-            type="button"
-            onClick={() => setActiveTab('today')}
-            className={`px-10 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 ${activeTab === 'today' ? 'bg-[var(--lux-gold)] text-black shadow-2xl scale-105' : 'text-[var(--lux-muted)] hover:text-white hover:bg-white/5'}`}
-          >
-            Today Arrivals
-          </button>
-          <button 
-            type="button"
-            onClick={() => setActiveTab('tomorrow')}
-            className={`px-10 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 ${activeTab === 'tomorrow' ? 'bg-[var(--lux-gold)] text-black shadow-2xl scale-105' : 'text-[var(--lux-muted)] hover:text-white hover:bg-white/5'}`}
-          >
-            Tomorrow
-          </button>
-        </div>
-        <div className="text-center sm:text-right">
-           <p className="text-[9px] font-black uppercase text-[var(--lux-gold)] tracking-[0.3em] mb-1">Live Manifest</p>
-           <p className="text-[8px] font-black uppercase text-[var(--lux-muted)] tracking-widest">
-              {dashboardBookings.length} ENTERPRISE ARRIVALS EXPECTED
-           </p>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {dashboardBookings.map((b: any) => (
-          <div key={b._id} className="p-6 bg-[var(--lux-bg)] rounded-3xl border border-[var(--lux-border)] group hover:border-[var(--lux-gold)]/30 transition-all flex flex-col justify-between h-48 shadow-lg relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-[var(--lux-gold)]/5 rounded-full -mr-12 -mt-12 blur-2xl"></div>
-            <div className="flex justify-between items-start relative z-10">
-              <div className="space-y-1">
-                <p className="text-lg font-bold truncate max-w-[160px] leading-tight tracking-tight">{b.guestDetails?.name}</p>
-                <p className="text-[9px] text-[var(--lux-muted)] uppercase font-black tracking-[0.2em]">{b.guestDetails?.phone}</p>
-              </div>
-              <div className="text-right">
-                <span className="text-[8px] font-black text-[var(--lux-gold)] bg-[var(--lux-gold)]/10 px-3 py-1.5 rounded-xl border border-[var(--lux-gold)]/20 uppercase tracking-widest shadow-lg">
-                  {b.roomNumber ? `RM ${b.roomNumber}` : 'UNASSIGNED'}
-                </span>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between pt-6 border-t border-white/5 relative z-10">
-               <div>
-                  <p className="text-[8px] font-black uppercase opacity-40 mb-1 tracking-widest">Contract Value</p>
-                  <p className="text-2xl font-display font-bold text-[var(--lux-gold)] shadow-sm">₹{b.totalAmount}</p>
-               </div>
-               <button type="button" className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center hover:bg-[var(--lux-gold)] hover:text-black transition-all shadow-xl border border-white/5">
-                  <ArrowRight size={20} />
-               </button>
-            </div>
-          </div>
-        ))}
-
-        {dashboardBookings.length === 0 && (
-          <div className="col-span-full py-20 flex flex-col items-center justify-center space-y-6 bg-white/[0.02] border border-dashed border-[var(--lux-border)] rounded-[3rem]">
-              <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center border border-white/5">
-                <Calendar size={28} className="text-[var(--lux-muted)] opacity-20" />
-              </div>
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--lux-muted)]">No Arrivals Manifested</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick }: { activeHotelId: string, onHotelChange: (id: string) => void, onWalkInClick: () => void }) => {
+export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, onInvoiceClick }: { activeHotelId: string, onHotelChange: (id: string) => void, onWalkInClick: () => void, onInvoiceClick: (booking: any) => void }) => {
   const queryClient = useQueryClient();
   const { data: allHotels = [], isLoading: loadingHotels } = useHotelsList();
   const [searchQuery, setSearchQuery] = useState('');
@@ -140,6 +59,11 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick }:
   // Quick Settlement States for Sidebar
   const [cashPayment, setCashPayment] = useState<string>('');
   const [upiPayment, setUpiPayment] = useState<string>('');
+
+  // Added: OTA state for Integrated Check-In
+  const [ciSource, setCiSource] = useState('walk_in');
+  const [ciPlatform, setCiPlatform] = useState('');
+  const [ciOtaPayType, setCiOtaPayType] = useState('pay_at_hotel');
 
   // ESC Key Listener
   useEffect(() => {
@@ -190,7 +114,13 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick }:
   });
 
   const { data: activeBookings = [] } = useActiveBookings(activeHotelId);
-  const { data: availabilityMap = { occupied: [], blocked: [] } } = useRoomAvailabilityMap(activeHotelId, new Date().toISOString().split('T')[0], new Date(Date.now() + 86400000).toISOString().split('T')[0]);
+  const getLocalDateStr = (offsetDays = 0) => {
+    const d = new Date();
+    if (offsetDays) d.setDate(d.getDate() + offsetDays);
+    return d.toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
+  };
+
+  const { data: availabilityMap = { occupied: [], blocked: [] } } = useRoomAvailabilityMap(activeHotelId, getLocalDateStr(), getLocalDateStr(1));
 
   const handleIntegratedCheckIn = async (booking: any) => {
     const tid = toast.loading(`Checking-in ${booking.guestDetails?.name}...`);
@@ -214,49 +144,68 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick }:
     } catch (err: any) { toast.error(err.message, { id: tid }); }
   };
 
-  const rooms = useMemo(() => {
-    if (!activeHotel) return [];
-    
-    const bMap = new Map();
-    activeBookings.forEach((b: any) => { if (b.roomNumber) bMap.set(b.roomNumber.toString(), b); });
-    
-    const sMap = new Map();
-    physicalStatuses.forEach((s: any) => { if (s.roomNumber) sMap.set(s.roomNumber.toString(), s); });
-    
-    const occSet = new Set((availabilityMap.occupied || []).map((n: any) => n.toString()));
-    const blkSet = new Set((availabilityMap.blocked || []).map((n: any) => n.toString()));
-
-    const generated: any[] = [];
-    activeHotel.rooms.forEach((roomType: any, idx: number) => {
-      const count = roomType.total_rooms || 10;
-      const startNum = (idx + 1) * 100 + 1;
-      const numbers = roomType.numbers && roomType.numbers.length > 0 ? roomType.numbers : Array.from({ length: count }, (_, i) => (startNum + i).toString());
-
-      numbers.forEach((num: string) => {
-        const curBooking = bMap.get(num.toString());
-        const manStatus = sMap.get(num.toString());
-        const isOcc = !!curBooking || occSet.has(num.toString());
-        const isBlk = manStatus?.status === 'Maintenance' || manStatus?.status === 'Blocked' || blkSet.has(num.toString());
+    const rooms = useMemo(() => {
+      if (!activeHotel) return [];
+      
+      const today = new Date().toLocaleDateString('en-CA'); // Robust Local YYYY-MM-DD
+      
+      const bMap = new Map();
+      activeBookings.forEach((b: any) => { 
+        if (!b || !b.roomNumber) return;
         
-        let status: 'Available' | 'Booked' | 'Cleaning' | 'Maintenance' | 'Dirty' | 'Reserved' = 'Available';
-        if (isBlk) status = 'Maintenance';
-        else if (manStatus?.status === 'Cleaning') status = 'Cleaning';
-        else if (manStatus?.status === 'Dirty') status = 'Dirty';
-        else if (curBooking?.status === 'checked-in' || (isOcc && !curBooking)) status = 'Booked';
-        else if (curBooking?.status === 'reserved' || curBooking?.status === 'confirmed') status = 'Reserved';
-
-        generated.push({ 
-          number: num, 
-          type: roomType.type, 
-          price: roomType.price, 
-          roomId: roomType.id, 
-          status,
-          booking: curBooking
+        const bIn = b.checkin.split('T')[0];
+        const bOut = b.checkout.split('T')[0];
+        
+        const isActuallyIn = b.status === 'checked-in';
+        const isScheduledForToday = (b.status === 'reserved' || b.status === 'confirmed') && bIn <= today;
+        
+        if (isActuallyIn || isScheduledForToday) {
+          const roomStr = String(b.roomNumber);
+          const existing = bMap.get(roomStr);
+          if (!existing || b.status === 'checked-in') {
+            bMap.set(roomStr, b); 
+          }
+        }
+      });
+      
+      const sMap = new Map();
+      physicalStatuses.forEach((s: any) => { if (s.roomNumber) sMap.set(s.roomNumber.toString(), s); });
+      
+      const occSet = new Set((availabilityMap.occupied || []).map((n: any) => n.toString()));
+      const blkSet = new Set((availabilityMap.blocked || []).map((n: any) => n.toString()));
+  
+      const generated: any[] = [];
+      activeHotel.rooms.forEach((roomType: any, idx: number) => {
+        const count = roomType.total_rooms || 10;
+        const startNum = (idx + 1) * 100 + 1;
+        const numbers = roomType.numbers && roomType.numbers.length > 0 ? roomType.numbers : Array.from({ length: count }, (_, i) => (startNum + i).toString());
+  
+        numbers.forEach((num: string) => {
+          const roomStr = String(num);
+          const curBooking = bMap.get(roomStr);
+          const manStatus = sMap.get(roomStr);
+          const isOcc = !!curBooking || occSet.has(roomStr);
+          const isBlk = manStatus?.status === 'Maintenance' || manStatus?.status === 'Blocked' || blkSet.has(roomStr);
+          
+          let status: 'Available' | 'Booked' | 'Cleaning' | 'Maintenance' | 'Dirty' | 'Reserved' = 'Available';
+          if (isBlk) status = 'Maintenance';
+          else if (manStatus?.status === 'Cleaning') status = 'Cleaning';
+          else if (manStatus?.status === 'Dirty') status = 'Dirty';
+          else if (curBooking?.status === 'checked-in' || (isOcc && !curBooking)) status = 'Booked';
+          else if (curBooking?.status === 'reserved' || curBooking?.status === 'confirmed') status = 'Reserved';
+  
+          generated.push({ 
+            number: num, 
+            type: roomType.type, 
+            price: roomType.price, 
+            roomId: roomType.id, 
+            status,
+            booking: curBooking
+          });
         });
       });
-    });
-    return generated;
-  }, [activeHotel, activeBookings, physicalStatuses, availabilityMap]);
+      return generated;
+    }, [activeHotel, activeBookings, physicalStatuses, availabilityMap]);
 
   const filteredRooms = useMemo(() => {
     return rooms.filter(r => {
@@ -439,10 +388,18 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick }:
 
   // Live Ledger Calculations for Integrated Check-In
   const checkInTotal = Number(liveSelectedRoom?.price) || 0;
+  const isOtaPaidOnline = ciSource === 'ota' && ciOtaPayType === 'paid_online';
   const checkInOffline = Number(offlineAmount) || 0;
   const checkInOnline = Number(onlineAmount) || 0;
-  const totalPaidCheckIn = checkInOffline + checkInOnline;
+  const totalPaidCheckIn = isOtaPaidOnline ? checkInTotal : (checkInOffline + checkInOnline);
   const balanceCheckIn = checkInTotal - totalPaidCheckIn;
+
+  useEffect(() => {
+    if (ciSource === 'ota' && ciOtaPayType === 'paid_online') {
+      setOfflineAmount('0');
+      setOnlineAmount('0');
+    }
+  }, [ciSource, ciOtaPayType]);
 
   const handleIntegratedWalkIn = async () => {
     if (!liveSelectedRoom || !guestName || !guestMobile) return toast.error("Complete Identity Details");
@@ -474,7 +431,11 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick }:
           name: guestName,
           phone: guestMobile,
           email: guestEmail || 'guest@example.com'
-        }
+        },
+        bookingSource: ciSource,
+        bookingPlatform: ciPlatform,
+        otaPaymentType: ciOtaPayType,
+        paymentStatus: ciSource === 'ota' && ciOtaPayType === 'paid_online' ? 'paid' : (totalPaidCheckIn >= checkInTotal ? 'paid' : 'partial')
       };
 
       const res = await fetch(`${API_BASE_URL}/api/content/bookings/pay-at-hotel`, {
@@ -490,6 +451,7 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick }:
         toast.success("CHECK-IN SUCCESSFUL", { id: tid });
         setGuestName(''); setGuestMobile(''); setGuestEmail('');
         setOfflineAmount(''); setOnlineAmount('');
+        setCiSource('walk_in'); setCiPlatform(''); setCiOtaPayType('pay_at_hotel');
         refetchAll();
         queryClient.invalidateQueries({ queryKey: ['active-bookings'] });
         queryClient.invalidateQueries({ queryKey: ['room-status'] });
@@ -514,52 +476,17 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick }:
   return (
     <div className="space-y-8 pb-20">
       <div className="flex flex-col gap-8 items-start">
-        {/* UPCOMING ARRIVALS - TOP MINI SECTION */}
-        <div className="w-full bg-[var(--lux-card)] rounded-[2rem] border border-[var(--lux-border)] p-6 overflow-hidden">
-           <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                 <div className="w-8 h-8 rounded-lg bg-[var(--lux-gold)]/10 flex items-center justify-center text-[var(--lux-gold)]">
-                    <Clock size={14} />
-                 </div>
-                 <h4 className="text-[10px] font-black uppercase tracking-widest leading-none">Upcoming Arrivals <span className="opacity-40">(Today/Tomorrow)</span></h4>
-              </div>
-           </div>
-           <div className="flex gap-4 overflow-x-auto pb-2 custom-scrollbar no-scrollbar scroll-smooth">
-              {activeBookings.filter((b: any) => b.status === 'reserved' || b.status === 'confirmed').slice(0, 8).map((b: any) => (
-                 <div key={b._id} className="min-w-[200px] bg-black/40 border border-white/5 p-4 rounded-xl flex flex-col justify-between group hover:border-[var(--lux-gold)]/40 transition-all cursor-pointer">
-                    <div className="flex justify-between items-start mb-2">
-                       <p className="font-bold text-[12px] truncate max-w-[120px]">{b.guestDetails?.name}</p>
-                       <span className="text-[9px] font-black text-[var(--lux-gold)] bg-[var(--lux-gold)]/10 px-2 py-0.5 rounded-md">Room {b.roomNumber}</span>
-                    </div>
-                    <div className="flex items-center justify-between mt-2">
-                       <p className="text-[8px] font-bold opacity-40">{new Date(b.checkin).toLocaleDateString()}</p>
-                       <button 
-                         onClick={(e) => {
-                           e.stopPropagation();
-                           handleIntegratedCheckIn(b);
-                         }}
-                         className="px-3 py-1 bg-white/5 hover:bg-[var(--lux-gold)] hover:text-black text-[8px] font-black uppercase tracking-widest rounded-lg transition-all"
-                       >
-                          Check-in
-                       </button>
-                    </div>
-                 </div>
-              ))}
-              {activeBookings.filter((b: any) => b.status === 'reserved' || b.status === 'confirmed').length === 0 && (
-                 <p className="text-[10px] text-[var(--lux-muted)] py-4 font-bold italic tracking-wider">No arrivals pending today.</p>
-              )}
-           </div>
-        </div>
+
         {/* ROOM GRID HUB */}
         <div className="flex-1 w-full space-y-10">
             <div className="flex flex-col xl:flex-row justify-between items-center gap-8">
-               <div className="flex items-center gap-2 p-1.5 bg-[var(--lux-card)] rounded-2xl border border-white/5 shadow-inner">
+               <div className="flex items-center gap-2 p-1.5 bg-[var(--lux-card)] rounded-2xl border border-white/5 shadow-inner overflow-x-auto no-scrollbar max-w-full">
                   {['All', 'Available', 'Booked', 'Cleaning', 'Dirty'].map((f) => (
                     <button 
                       key={f}
                       type="button"
                       onClick={() => setStatusFilter(f as any)}
-                      className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${statusFilter === f ? 'bg-[var(--lux-gold)] text-black shadow-lg shadow-[var(--lux-gold)]/20' : 'text-[var(--lux-muted)] hover:text-white hover:bg-white/5'}`}
+                      className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex-shrink-0 ${statusFilter === f ? 'bg-[var(--lux-gold)] text-black shadow-lg shadow-[var(--lux-gold)]/20' : 'text-[var(--lux-muted)] hover:text-white hover:bg-white/5'}`}
                     >
                       {f}
                     </button>
@@ -599,6 +526,7 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick }:
                   const statusColors: any = {
                     'Available': 'room-card-available',
                     'Booked': 'room-card-booked',
+                    'Reserved': 'room-card-booked',
                     'Cleaning': 'room-card-cleaning',
                     'Dirty': 'room-card-dirty',
                     'Maintenance': 'bg-gray-800 border-gray-700 opacity-50'
@@ -619,14 +547,24 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick }:
 
                             {/* Header row */}
                             <div className="flex flex-col">
-                               <span className={`text-[9px] font-black uppercase tracking-widest opacity-40 leading-none mb-1 ${isActive ? 'text-black' : ''}`}>UNIT REGISTRY</span>
+                               <span className={`text-[9px] font-black uppercase tracking-widest text-[#A1A1AA] leading-none mb-1 ${isActive ? 'text-black' : ''}`}>UNIT REGISTRY</span>
                                <span className={`text-[13px] font-bold leading-none ${isActive ? 'text-black' : ''}`}>#{room.number}</span>
                             </div>
+
+                            {/* Badge row for OTA */}
+                            {room.booking?.bookingSource === 'ota' && (
+                              <div className="absolute top-12 right-4 flex flex-col items-end gap-1">
+                                 <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${isActive ? 'bg-black/20 text-black' : 'bg-[var(--lux-gold)]/20 text-[var(--lux-gold)]'}`}>
+                                    {room.booking.bookingPlatform}
+                                 </span>
+                                 <div className={`w-2 h-2 rounded-full ${room.booking.otaPaymentType === 'paid_online' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.6)]'}`} title={room.booking.otaPaymentType === 'paid_online' ? 'Paid Online' : 'Pay at Hotel'} />
+                              </div>
+                            )}
 
                             {/* Body row: Large Number & Type */}
                             <div className="flex flex-col items-center justify-center -translate-y-2">
                                <h4 className={`text-[46px] font-display font-black leading-none tracking-tighter ${isActive ? 'text-black' : ''}`}>{room.number}</h4>
-                               <p className={`text-[11px] font-black uppercase tracking-[0.2em] opacity-30 mt-1 whitespace-nowrap overflow-hidden text-center max-w-full truncate ${isActive ? 'text-black/60' : ''}`}>{room.type}</p>
+                               <p className={`text-[11px] font-black uppercase tracking-[0.2em] text-[#A1A1AA] mt-1 whitespace-nowrap overflow-hidden text-center max-w-full truncate ${isActive ? 'text-black/60' : ''}`}>{room.type}</p>
                             </div>
 
                             {/* Footer row: Guest Info */}
@@ -637,8 +575,8 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick }:
                                        <span className={`text-[13px] font-bold truncate ${isActive ? 'text-black' : ''}`} title={room.booking.guestDetails?.name}>
                                           {room.booking.guestDetails?.name || 'In-House Client'}
                                        </span>
-                                       <span className={`text-[9px] font-black uppercase tracking-widest opacity-30 ${isActive ? 'text-black/40' : ''}`}>
-                                          {room.status === 'Booked' ? 'Stay Duration' : 'Reserved Delay'}
+                                       <span className={`text-[9px] font-black uppercase tracking-widest text-[#6B7280] ${isActive ? 'text-black/40' : ''}`}>
+                                          {room.status === 'Booked' ? 'Stay Duration' : (room.status === 'Reserved' ? 'Arrival Today' : 'System Standby')}
                                        </span>
                                     </div>
                                     <div className="text-right flex flex-col items-end">
@@ -700,8 +638,15 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick }:
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={() => setSelectedRoom(room)}
-                            className={`grid-room-box group cursor-pointer ${isActive ? 'ring-2 ring-[var(--lux-gold)] ring-offset-2 ring-offset-black' : ''} ${statusStyles[room.status] || 'bg-zinc-900'}`}
+                            className={`grid-room-box group cursor-pointer ${isActive ? 'ring-2 ring-[var(--lux-gold)] ring-offset-2 ring-offset-black shadow-2xl scale-105 z-10' : ''} ${statusStyles[room.status] || 'bg-zinc-900'} relative overflow-hidden`}
                           >
+                             {/* Small indicator badges for compact view */}
+                             {room.booking?.bookingSource === 'ota' && (
+                               <div className="absolute top-1 right-1 flex items-center gap-1">
+                                  <div className={`w-1.5 h-1.5 rounded-full ${room.booking.otaPaymentType === 'paid_online' ? 'bg-white' : 'bg-yellow-300'}`} />
+                               </div>
+                             )}
+
                             {/* Status Dot */}
                             <div className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${room.status === 'Available' ? 'bg-green-500' : 'bg-red-500'} shadow-[0_0_8px_currentColor]`} />
                             
@@ -728,7 +673,10 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick }:
                                <button className="p-1.5 hover:bg-[var(--lux-gold)] hover:text-black rounded-xl transition-all text-white">
                                   <Eye size={14} />
                                 </button>
-                               <button className="p-1.5 hover:bg-[var(--lux-gold)] hover:text-black rounded-xl transition-all text-white">
+                               <button 
+                                 onClick={(e) => { e.stopPropagation(); onInvoiceClick(room.booking); }}
+                                 className="p-1.5 hover:bg-[var(--lux-gold)] hover:text-black rounded-xl transition-all text-white"
+                               >
                                   <Receipt size={14} />
                                 </button>
                             </div>
@@ -764,11 +712,11 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick }:
               >
                 <div className="p-8 border-b border-white/5 flex justify-between items-center bg-[var(--lux-card)]">
                    <div>
-                      <p className="text-[10px] font-black uppercase opacity-40 mb-1">Perspective View</p>
-                      <h2 className="text-5xl font-display font-bold tracking-tight leading-none">Unit <span className="text-[var(--lux-gold)]">{liveSelectedRoom.number}</span></h2>
+                      <p className="text-[10px] font-black uppercase text-[#A1A1AA] mb-1">Perspective View</p>
+                      <h2 className="text-5xl font-display font-bold tracking-tight leading-none text-[var(--lux-text)]">Unit <span className="text-[var(--lux-gold)]">{liveSelectedRoom.number}</span></h2>
                    </div>
-                   <button type="button" onClick={() => setSelectedRoom(null)} className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center hover:bg-red-500 transition-all border border-white/5 shadow-xl text-white">
-                      <LogOut size={24} />
+                   <button type="button" onClick={() => setSelectedRoom(null)} className="w-14 h-14 bg-[var(--lux-soft)] rounded-2xl flex items-center justify-center hover:bg-red-500 transition-all border border-white/5 shadow-xl text-[var(--lux-text)]">
+                      <X size={24} />
                    </button>
                 </div>
 
@@ -780,21 +728,88 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick }:
                          <div className="flex-1 overflow-y-auto px-8 py-10 space-y-12 custom-scrollbar pb-32 md:pb-10">
                             {/* Guest Quick Identity */}
                             <section className="space-y-4">
-                               <p className="text-[10px] font-black uppercase tracking-widest text-white/50 pl-2">1. Guest Profile</p>
-                               <div className="flex items-center gap-6 p-6 bg-[var(--lux-card)] border border-white/10 rounded-[2.5rem] relative group hover:border-[var(--lux-gold)]/20 transition-all duration-500 shadow-xl">
+                               <p className="text-[10px] font-black uppercase tracking-widest text-[var(--lux-text-muted)] pl-2">1. Guest Profile</p>
+                               <div className="flex items-center gap-6 p-6 bg-[#121214] border border-[#2A2A2E] rounded-[2.5rem] relative group hover:border-[var(--lux-gold)]/20 transition-all duration-500 shadow-xl">
                                   <div className="w-20 h-20 rounded-2xl bg-[var(--lux-gold)]/10 flex items-center justify-center text-[var(--lux-gold)] font-display font-bold text-4xl border border-[var(--lux-gold)]/20 shadow-inner">
                                      {financials.status === 'PAID' ? <ShieldCheck size={36} /> : liveSelectedRoom.booking.guestDetails?.name?.[0]}
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                     <h4 className="text-3xl font-black tracking-tighter truncate leading-tight text-white">{liveSelectedRoom.booking.guestDetails?.name}</h4>
+                                     <h4 className="text-3xl font-black tracking-tighter truncate leading-tight text-[#F5F5F7]">{liveSelectedRoom.booking.guestDetails?.name}</h4>
                                      <div className="flex items-center gap-3 mt-1">
-                                        <p className="text-[11px] font-bold text-white/50 uppercase tracking-[0.1em]">{liveSelectedRoom.booking.guestDetails?.phone}</p>
-                                        <div className="w-1 h-1 rounded-full bg-white/20"></div>
-                                        <p className="text-[11px] font-bold text-[var(--lux-gold)] uppercase tracking-[0.1em]">Verified Profile</p>
+                                        <p className="text-[11px] font-bold text-[#A1A1AA] uppercase tracking-[0.1em]">{liveSelectedRoom.booking.guestDetails?.phone}</p>
+                                        <div className="w-1 h-1 rounded-full bg-[var(--lux-border)]"></div>
+                                        <p className="text-[11px] font-bold text-[#D4AF37] uppercase tracking-[0.1em]">Verified Profile</p>
                                      </div>
-                                  </div>
-                                  <div className={`px-6 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-2xl ${financials.status === 'PAID' ? 'bg-green-500 text-white' : 'bg-[var(--lux-gold)] text-black'}`}>
-                                     {financials.status}
+                                     <div className="flex items-center gap-3 mt-4">
+                                      {liveSelectedRoom.booking.guestDetails?.phone && (
+                                         <>
+                                            <button 
+                                               type="button" 
+                                               onClick={() => {
+                                                  const num = liveSelectedRoom.booking.guestDetails.phone.replace(/\D/g, '');
+                                                  window.open(`tel:${num.startsWith('91') ? '+' : ''}${num}`);
+                                               }}
+                                               className="w-10 h-10 rounded-full bg-[rgba(59,130,246,0.12)] text-[#3B82F6] flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all shadow-sm"
+                                               title="Call Guest"
+                                            >
+                                               <Phone size={16} />
+                                            </button>
+                                            <button 
+                                               type="button" 
+                                               onClick={(e) => {
+                                                  e.preventDefault();
+                                                  e.stopPropagation();
+                                                  const guest = liveSelectedRoom.booking.guestDetails;
+                                                  const room = liveSelectedRoom;
+                                                  const hotel = activeHotel;
+                                                  const fin = financials;
+                                                  
+                                                  const phone = guest.phone.replace(/\D/g, '');
+                                                  const formattedPhone = phone.length === 10 ? `91${phone}` : phone;
+                                                  const guestName = guest.name ? guest.name.charAt(0).toUpperCase() + guest.name.slice(1) : 'Guest';
+                                                  const hotelName = hotel?.name || 'Hotel Samrat';
+
+                                                  // Use CodePoints to avoid any encoding-related diamond issues
+                                                  const h = String.fromCodePoint(0x1F3E8); // Hotel
+                                                  const b = String.fromCodePoint(0x1F4B0); // Money Bag
+                                                  const w = String.fromCodePoint(0x26A0) + String.fromCodePoint(0xFE0F); // Warning
+                                                  const s = String.fromCodePoint(0x2705); // Success
+                                                  const p = String.fromCodePoint(0x1F64F); // Prayer
+                                                  const r = String.fromCodePoint(0x20B9); // Rupee
+
+                                                  const messageParts = [
+                                                     `*Hello ${guestName},*`,
+                                                     `Your booking invoice from *${hotelName}* is ready.`,
+                                                     `--------------------------------`,
+                                                     `${h} *STAY DETAILS*`,
+                                                     `--------------------------------`,
+                                                     `*Room:* ${room.number}`,
+                                                     `*Check-in:* ${new Date(room.booking.checkin).toLocaleDateString('en-IN')}`,
+                                                     `*Check-out:* ${new Date(room.booking.checkout).toLocaleDateString('en-IN')}`,
+                                                     `--------------------------------`,
+                                                     `${b} *BILLING SUMMARY*`,
+                                                     `--------------------------------`,
+                                                     `*Total Amount:* ${r}${fin.total}`,
+                                                     `*Paid:* ${r}${fin.paid}`,
+                                                     fin.balance > 0 ? `*${w} Balance:* ${r}${fin.balance}` : `${s} *Payment Completed*`,
+                                                     `\nThank you for choosing us! ${p}`
+                                                  ];
+
+                                                  const finalMessage = messageParts.join('\n');
+                                                  toast.info("Opening WhatsApp...");
+                                                  window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(finalMessage)}`, '_blank');
+                                               }}
+                                               className="w-10 h-10 rounded-full bg-[rgba(34,197,94,0.12)] text-[#22C55E] flex items-center justify-center hover:bg-green-500 hover:text-white transition-all shadow-sm hover:shadow-[0_0_15px_rgba(34,197,94,0.4)]"
+                                               title="Send Invoice via WhatsApp"
+                                            >
+                                               <MessageCircle size={16} />
+                                            </button>
+                                         </>
+                                      )}
+                                      <div className={`px-6 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-2xl ${financials.status === 'PAID' ? 'bg-green-500 text-white' : 'bg-[var(--lux-gold)] text-black'}`}>
+                                         {financials.status}
+                                      </div>
+                                   </div>
                                   </div>
                                </div>
                             </section>
@@ -819,7 +834,7 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick }:
                                            </div>
                                            <div className="space-y-0.5">
                                               <p className="text-sm font-bold tracking-tight text-white">{item.name}</p>
-                                              <p className="text-[11px] font-black text-white/40 uppercase">₹{item.price}</p>
+                                              <p className="text-[11px] font-black text-white/70 uppercase">₹{item.price}</p>
                                            </div>
                                         </div>
                                         <div className="flex items-center gap-3">
@@ -835,9 +850,9 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick }:
                                         </div>
                                      </motion.div>
                                   )) : (
-                                    <div className="text-center py-10 rounded-3xl border border-dashed border-white/10 opacity-40">
-                                       <LayoutGrid size={32} className="mx-auto mb-3 text-white" />
-                                       <p className="text-[10px] uppercase font-black tracking-widest text-white">No extra charges recorded</p>
+                                    <div className="text-center py-10 rounded-3xl border border-dashed border-[#2A2A2E] bg-[#121214]">
+                                       <LayoutGrid size={32} className="mx-auto mb-3 text-[#6B7280]" />
+                                       <p className="text-[10px] uppercase font-black tracking-widest text-[#6B7280]">No extra charges recorded</p>
                                     </div>
                                   )}
                                </div>
@@ -857,7 +872,7 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick }:
                                   </div>
                                   <button 
                                      type="submit" disabled={isSubmitting}
-                                     className="px-8 bg-white/10 text-white rounded-xl text-[10px] font-black uppercase hover:bg-white/20 transition-all border border-white/5"
+                                     className="px-8 bg-[var(--lux-soft)] text-[var(--lux-text)] rounded-xl text-[10px] font-black uppercase hover:bg-[var(--lux-gold)] hover:text-black transition-all border border-[var(--lux-border)]"
                                   >
                                      Add
                                   </button>
@@ -866,20 +881,20 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick }:
 
                             {/* Settlement Form */}
                             <section className="space-y-6">
-                               <p className="text-[10px] font-black uppercase tracking-widest text-[var(--lux-muted)] pl-2">3. Settle Balance</p>
-                               <form onSubmit={handleSidebarPayment} className="p-8 bg-[#161616] border border-[#222] rounded-[2.5rem] space-y-6 shadow-2xl relative overflow-hidden group">
+                               <p className="text-[10px] font-black uppercase tracking-widest text-[#A1A1AA] pl-2">3. Settle Balance</p>
+                               <form onSubmit={handleSidebarPayment} className="p-8 bg-[#0F0F10] border border-[#2A2A2E] rounded-[2.5rem] space-y-6 shadow-2xl relative overflow-hidden group">
                                   <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--lux-gold)]/5 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-[var(--lux-gold)]/10 transition-all duration-1000"></div>
                                   
                                   <div className="grid grid-cols-2 gap-6 relative z-10">
                                      <div className="premium-input-container">
-                                        <label className="text-[9px] font-black uppercase tracking-widest text-[var(--lux-muted)] ml-2">Offline / Cash</label>
+                                        <label className="text-[9px] font-black uppercase tracking-widest text-[#6B7280] ml-2">Offline / Cash</label>
                                         <input 
                                           type="number" value={cashPayment} onChange={(e) => setCashPayment(e.target.value)}
                                           placeholder="₹0" className="premium-input text-xl text-green-500 font-display" 
                                         />
                                      </div>
                                      <div className="premium-input-container">
-                                        <label className="text-[9px] font-black uppercase tracking-widest text-[var(--lux-muted)] ml-2">Online / UPI</label>
+                                        <label className="text-[9px] font-black uppercase tracking-widest text-[#6B7280] ml-2">Online / UPI</label>
                                         <input 
                                           type="number" value={upiPayment} onChange={(e) => setUpiPayment(e.target.value)}
                                           placeholder="₹0" className="premium-input text-xl text-blue-500 font-display" 
@@ -900,50 +915,50 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick }:
                          <div className="w-full md:w-[380px] bg-[var(--lux-card)] border-l border-white/5 flex flex-col">
                             <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
                                <div className="space-y-6">
-                                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">Financial History</p>
+                                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#A1A1AA]">Financial History</p>
                                   
-                                  <div className="bg-black/20 rounded-3xl p-6 border border-white/10 space-y-4">
+                                  <div className="bg-[#121214] rounded-3xl p-6 border border-[#2A2A2E] space-y-4 shadow-xl">
                                      <div className="flex justify-between items-center text-sm font-bold">
-                                        <span className="text-white/40">Room Charges:</span>
-                                        <span className="text-white">₹{financials.total - financials.extrasTotal}</span>
+                                        <span className="text-[#A1A1AA]">Room Charges:</span>
+                                        <span className="text-[#F5F5F7] font-semibold">₹{financials.total - financials.extrasTotal}</span>
                                      </div>
                                      <div className="flex justify-between items-center text-sm font-bold">
-                                        <span className="text-white/40">Extras Hub:</span>
-                                        <span className="text-[var(--lux-gold)]">₹{financials.extrasTotal}</span>
+                                        <span className="text-[#A1A1AA]">Extras Hub:</span>
+                                        <span className="text-[#F5F5F7] font-semibold">₹{financials.extrasTotal}</span>
                                      </div>
                                      <div className="h-px bg-white/5 my-2"></div>
                                      <div className="flex justify-between items-center">
-                                        <span className="text-[11px] font-black uppercase tracking-widest text-white/30">Gross Invoice</span>
-                                        <span className="text-3xl font-display font-bold text-white">₹{financials.total}</span>
+                                        <span className="text-[11px] font-black uppercase tracking-widest text-[#6B7280]">Gross Invoice</span>
+                                        <span className="text-3xl font-display font-bold text-[#D4AF37]">₹{financials.total}</span>
                                      </div>
                                   </div>
                                </div>
 
                                <div className="space-y-6">
-                                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">Collection Dashboard</p>
-                                  <div className="bg-[#161616] rounded-3xl p-8 border border-[#222] space-y-8 relative overflow-hidden group shadow-xl">
+                                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#A1A1AA]">Collection Dashboard</p>
+                                  <div className="bg-[#0F0F10] rounded-3xl p-8 border border-[#2A2A2E] space-y-8 relative overflow-hidden group shadow-xl">
                                      <div className="absolute inset-0 bg-gradient-to-br from-[var(--lux-gold)]/[0.02] to-transparent"></div>
                                      
                                      <div className="flex justify-between items-start relative z-10">
                                         <div className="space-y-1">
-                                           <p className="text-[9px] font-black uppercase text-white/30 tracking-widest">Actual Collected</p>
-                                           <h4 className="text-3xl font-display font-bold text-green-400 italic">₹{financials.paid}</h4>
+                                           <p className="text-[9px] font-black uppercase text-white/50 tracking-widest">Actual Collected</p>
+                                           <h4 className="text-3xl font-display font-bold text-[#22C55E] italic">₹{financials.paid}</h4>
                                         </div>
-                                        <div className={`px-5 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-2xl ${financials.balance <= 0 ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}>
+                                        <div className={`px-5 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-2xl ${financials.balance <= 0 ? 'bg-[rgba(34,197,94,0.12)] text-[#22C55E] border border-[rgba(34,197,94,0.25)]' : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}>
                                            {financials.status}
                                         </div>
                                      </div>
 
                                      <div className="space-y-4 relative z-10">
-                                        <div className="flex justify-between text-[11px] font-black uppercase tracking-widest text-white/40">
+                                        <div className="flex justify-between text-[11px] font-black uppercase tracking-widest text-white/50">
                                            <span>Wallet Health</span>
                                            <span className="text-white font-bold">{financials.paidPercent}%</span>
                                         </div>
-                                        <div className="w-full h-3 bg-black/50 rounded-full overflow-hidden p-0.5 border border-white/5">
+                                        <div className="w-full h-3 bg-[#2A2A2E] rounded-full overflow-hidden p-0.5 border border-white/5">
                                            <motion.div 
                                              initial={{ width: 0 }}
                                              animate={{ width: `${financials.paidPercent}%` }}
-                                             className="h-full rounded-full bg-gradient-to-r from-[var(--lux-gold)] to-yellow-400 shadow-[0_0_20px_rgba(212,175,55,0.4)] transition-all duration-1000" 
+                                             className="h-full rounded-full bg-gradient-to-r from-[#D4AF37] to-[#E6C15A] shadow-[0_0_20px_rgba(212,175,55,0.4)] transition-all duration-1000" 
                                            />
                                         </div>
                                      </div>
@@ -959,10 +974,14 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick }:
 
                                {/* Quick Controls */}
                                <div className="grid grid-cols-2 gap-3">
-                                  <button type="button" onClick={() => setShowCheckoutConfirm(true)} className="flex items-center justify-center gap-2 h-14 bg-black border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-[#111] transition-all">
+                                  <button type="button" onClick={() => setShowCheckoutConfirm(true)} className="flex items-center justify-center gap-2 h-14 bg-[var(--lux-soft)] border border-[var(--lux-border)] rounded-2xl text-[10px] font-black uppercase tracking-widest text-[var(--lux-text)] hover:opacity-80 transition-all shadow-sm">
                                      <LogOut size={14} /> Rapid C/O
                                   </button>
-                                  <button type="button" className="flex items-center justify-center gap-2 h-14 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all">
+                                  <button 
+                                    type="button" 
+                                    onClick={() => onInvoiceClick(liveSelectedRoom.booking)}
+                                    className="flex items-center justify-center gap-2 h-14 bg-[var(--lux-card)] border border-[var(--lux-border)] rounded-2xl text-[10px] font-black uppercase tracking-widest text-[var(--lux-text)] hover:opacity-80 transition-all shadow-sm"
+                                  >
                                      <CreditCard size={14} /> Invoice
                                   </button>
                                </div>
@@ -982,7 +1001,7 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick }:
                                ) : (
                                  <button 
                                    type="button" onClick={handleForceCheckout}
-                                   className="w-full h-16 bg-green-500 text-white rounded-[2rem] font-black uppercase tracking-[0.4em] text-[11px] hover:bg-green-600 transition-all shadow-2xl shadow-green-500/20 active:scale-95"
+                                   className="w-full h-16 bg-gradient-to-br from-[#22C55E] to-[#16A34A] text-white rounded-[2rem] font-black uppercase tracking-[0.4em] text-[11px] hover:scale-[1.02] transition-all shadow-[0_8px_25px_rgba(34,197,94,0.25)] active:scale-95"
                                  >
                                     Finalize & Check-out Room
                                  </button>
@@ -998,7 +1017,7 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick }:
                         <section className="space-y-8">
                            <div className="flex items-center justify-between border-b border-white/5 pb-4">
                               <h4 className="text-xs font-black uppercase tracking-[0.3em] text-[var(--lux-gold)]">1. Guest Information</h4>
-                              <span className="text-[10px] font-bold text-white/50 uppercase italic">Required for ledger</span>
+                              <span className="text-[10px] font-bold text-[var(--lux-muted)] uppercase italic">Required for ledger</span>
                            </div>
                            
                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1037,62 +1056,103 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick }:
                            </div>
                         </section>
 
+                        {/* Sidebar OTA Selection */}
                         <section className="space-y-8">
                            <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                              <h4 className="text-xs font-black uppercase tracking-[0.3em] text-[var(--lux-gold)]">2. Payment Method</h4>
-                              <div className="flex items-center gap-2">
-                                 <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-                                 <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Active Selector</span>
-                              </div>
+                              <h4 className="text-xs font-black uppercase tracking-[0.3em] text-[var(--lux-gold)]">2. Booking Source</h4>
                            </div>
-                           
-                           <div className="segmented-control">
-                              {['UPI', 'CASH', 'PARTIAL', 'Pay Later'].map((m) => (
-                                 <button 
-                                    key={m} 
-                                    type="button"
-                                    onClick={() => {
-                                       setPaymentMethod(m);
-                                       if (m === 'Pay Later') { setOfflineAmount(''); setOnlineAmount(''); }
-                                    }}
-                                    className={`segmented-item ${paymentMethod === m ? 'bg-[var(--lux-gold)] text-black shadow-lg scale-[1.02]' : 'text-[var(--lux-muted)] hover:text-white'}`}
-                                 >
-                                    {m}
-                                 </button>
+                           <div className="flex p-1 bg-black/5 dark:bg-black/20 rounded-xl border border-[var(--lux-border)]">
+                              {[{id: 'walk_in', label: 'Walk-in'}, {id: 'ota', label: 'Online Platform'}].map(s => (
+                                <button key={s.id} type="button" onClick={() => setCiSource(s.id)} className={`flex-1 py-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${ciSource === s.id ? 'bg-[var(--lux-gold)] text-black shadow-lg' : 'text-[var(--lux-muted)] hover:text-[var(--lux-text)]'}`}>
+                                  {s.label}
+                                </button>
                               ))}
                            </div>
-
-                           {paymentMethod === 'Pay Later' ? (
-                              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-6 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center gap-4">
-                                 <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500">⚠️</div>
-                                 <p className="text-[11px] font-bold text-amber-500 uppercase tracking-widest leading-tight">
-                                    Payment pending. Checkout will be restricted until balance is cleared.
-                                 </p>
-                              </motion.div>
-                           ) : (
-                               <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                  {(paymentMethod === 'CASH' || paymentMethod === 'PARTIAL') && (
-                                     <div className="premium-input-container">
-                                        <label className="text-[9px] font-black uppercase tracking-widest text-[var(--lux-muted)] ml-1">Cash Paid (Offline)</label>
-                                        <input 
-                                           type="number" value={offlineAmount} onChange={(e) => setOfflineAmount(e.target.value)}
-                                           className="premium-input text-lg text-green-400"
-                                           placeholder="₹0"
-                                        />
-                                     </div>
-                                  )}
-                                  {(paymentMethod === 'UPI' || paymentMethod === 'PARTIAL') && (
-                                     <div className="premium-input-container">
-                                        <label className="text-[9px] font-black uppercase tracking-widest text-[var(--lux-muted)] ml-1">Online Paid (UPI)</label>
-                                        <input 
-                                           type="number" value={onlineAmount} onChange={(e) => setOnlineAmount(e.target.value)}
-                                           className="premium-input text-lg text-blue-400"
-                                           placeholder="₹0"
-                                        />
-                                     </div>
-                                  )}
-                               </motion.div>
+                           
+                           {ciSource === 'ota' && (
+                             <div className="space-y-4 animate-in slide-in-from-top-2 duration-300">
+                                <select 
+                                  value={ciPlatform} onChange={(e) => setCiPlatform(e.target.value)}
+                                  className="w-full h-12 bg-black/5 dark:bg-black/20 border border-[var(--lux-border)] rounded-xl px-4 text-[11px] font-bold text-[var(--lux-text)] outline-none focus:border-[var(--lux-gold)] shadow-inner"
+                                >
+                                   <option value="" className="bg-[var(--lux-card)] text-[var(--lux-text)]">Select Platform Partner</option>
+                                   {['OYO', 'GoMMT', 'Booking.com', 'Agoda', 'Trivago'].map(p => <option key={p} value={p} className="bg-[var(--lux-card)] text-[var(--lux-text)]">{p}</option>)}
+                                </select>
+                                <div className="flex gap-2">
+                                   {[{id: 'paid_online', label: 'Fully Paid Online'}, {id: 'pay_at_hotel', label: 'Pay at Hotel'}].map(pt => (
+                                     <button key={pt.id} type="button" onClick={() => setCiOtaPayType(pt.id)} className={`flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${ciOtaPayType === pt.id ? 'border-[var(--lux-gold)] text-[var(--lux-gold)] bg-[var(--lux-gold)]/10 shadow-sm' : 'border-[var(--lux-border)] text-[var(--lux-muted)] hover:border-[var(--lux-muted)] hover:text-[var(--lux-text)]'}`}>
+                                       {pt.label}
+                                     </button>
+                                   ))}
+                                </div>
+                             </div>
                            )}
+                        </section>
+
+                        <section className="space-y-8">
+                           <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                              <h4 className="text-xs font-black uppercase tracking-[0.3em] text-[var(--lux-gold)]">3. Payment Settlement</h4>
+                           </div>
+
+                           {ciSource === 'ota' && ciOtaPayType === 'paid_online' ? (
+                               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-8 bg-green-500/10 border border-green-500/20 rounded-3xl flex flex-col items-center text-center space-y-3">
+                                  <CheckCircle className="text-green-500" size={32} />
+                                  <div className="space-y-1">
+                                    <p className="text-[12px] font-black uppercase tracking-widest text-green-500">Authorized via {ciPlatform || 'OTA'}</p>
+                                    <p className="text-[9px] font-bold opacity-60">Settlement is fully secured. No manual cash/UPI collection needed.</p>
+                                  </div>
+                               </motion.div>
+                            ) : (
+                               <div className="space-y-6">
+                                  <div className="segmented-control">
+                                     {['UPI', 'CASH', 'PARTIAL', 'Pay Later'].map((m) => (
+                                        <button 
+                                           key={m} 
+                                           type="button"
+                                           onClick={() => {
+                                              setPaymentMethod(m);
+                                              if (m === 'Pay Later') { setOfflineAmount(''); setOnlineAmount(''); }
+                                           }}
+                                           className={`segmented-item ${paymentMethod === m ? 'bg-[var(--lux-gold)] text-black shadow-lg scale-[1.02]' : 'text-[var(--lux-muted)] hover:text-[var(--lux-text)]'}`}
+                                        >
+                                           {m}
+                                        </button>
+                                     ))}
+                                  </div>
+
+                                  {paymentMethod === 'Pay Later' ? (
+                                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-6 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500">⚠️</div>
+                                        <p className="text-[11px] font-bold text-amber-500 uppercase tracking-widest leading-tight">
+                                           Payment pending. Checkout will be restricted until balance is cleared.
+                                        </p>
+                                     </motion.div>
+                                  ) : (
+                                      <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                         {(paymentMethod === 'CASH' || paymentMethod === 'PARTIAL') && (
+                                            <div className="premium-input-container">
+                                               <label className="text-[9px] font-black uppercase tracking-widest text-[var(--lux-muted)] ml-1">Cash Paid (Offline)</label>
+                                               <input 
+                                                  type="number" value={offlineAmount} onChange={(e) => setOfflineAmount(e.target.value)}
+                                                  className="premium-input text-lg text-green-400"
+                                                  placeholder="₹0"
+                                               />
+                                            </div>
+                                         )}
+                                         {(paymentMethod === 'UPI' || paymentMethod === 'PARTIAL') && (
+                                            <div className="premium-input-container">
+                                               <label className="text-[9px] font-black uppercase tracking-widest text-[var(--lux-muted)] ml-1">Online Paid (UPI)</label>
+                                               <input 
+                                                  type="number" value={onlineAmount} onChange={(e) => setOnlineAmount(e.target.value)}
+                                                  className="premium-input text-lg text-blue-400"
+                                                  placeholder="₹0"
+                                               />
+                                            </div>
+                                         )}
+                                      </motion.div>
+                                  )}
+                               </div>
+                            )}
                         </section>
                      </div>
 
@@ -1126,11 +1186,11 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick }:
                            </div>
 
                             <div className="space-y-6">
-                               <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">Payment Status</p>
+                               <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--lux-muted)]">Payment Status</p>
                                <div className="bg-[#161616] rounded-3xl p-6 border border-[#222] space-y-6 shadow-xl">
                                   <div className="flex justify-between items-start">
                                      <div className="space-y-1">
-                                        <p className="text-[9px] font-black uppercase text-white/30 tracking-widest">Total Paid</p>
+                                        <p className="text-[9px] font-black uppercase text-[var(--lux-muted)] tracking-widest">Total Paid</p>
                                         <h4 className="text-3xl font-display font-bold text-green-400 italic">₹{totalPaidCheckIn}</h4>
                                      </div>
                                      <div className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest ${balanceCheckIn <= 0 ? 'bg-green-500/20 text-green-400 border border-green-500/30' : balanceCheckIn === Number(liveSelectedRoom.price) ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'}`}>
@@ -1139,9 +1199,9 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick }:
                                   </div>
 
                                   <div className="space-y-3">
-                                     <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-white/40">
+                                     <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-[var(--lux-muted)]">
                                         <span>Settlement Progress</span>
-                                        <span className="text-white font-bold">{Math.min(100, Math.round((totalPaidCheckIn / (Number(liveSelectedRoom.price) || 1)) * 100))}%</span>
+                                        <span className="text-[var(--lux-text)] font-bold">{Math.min(100, Math.round((totalPaidCheckIn / (Number(liveSelectedRoom.price) || 1)) * 100))}%</span>
                                      </div>
                                      <div className="w-full h-2 bg-black/40 rounded-full overflow-hidden border border-white/5">
                                         <motion.div 
@@ -1215,13 +1275,13 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick }:
                </div>
                <div className="flex flex-col gap-3">
                   <button type="button" onClick={handleForceCheckout} className="py-5 bg-red-500 text-white rounded-2xl text-[10px] font-black uppercase hover:bg-red-600 transition-all">Complete Check-out</button>
-                  <button type="button" onClick={() => setShowCheckoutConfirm(false)} className="py-5 bg-white/5 text-white rounded-2xl text-[10px] font-black uppercase">Cancel</button>
+                  <button type="button" onClick={() => setShowCheckoutConfirm(false)} className="py-5 bg-[var(--lux-soft)] text-[var(--lux-text)] rounded-2xl text-[10px] font-black uppercase border border-[var(--lux-border)]">Cancel</button>
                </div>
             </motion.div>
          </div>
       )}
 
-      {activeHotel && <ReceptionSchedule bookings={allBookings} activeHotel={activeHotel} onRefresh={refetchAll} />}
+
     </div>
   );
 };

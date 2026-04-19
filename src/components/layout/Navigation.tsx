@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -9,10 +9,56 @@ import {
   Bed, 
   LogOut, 
   Sparkles, 
-  Clock,
   Sun,
-  Moon
+  Moon,
+  CreditCard,
+  Clock as ClockIcon
 } from 'lucide-react';
+
+const LiveClock = () => {
+  const [time, setTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+  };
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  };
+
+  return (
+    <div className="hidden md:flex items-center gap-3 px-4 py-2 bg-[var(--lux-card)]/40 backdrop-blur-md border border-[var(--lux-border)] rounded-2xl group hover:border-[var(--lux-gold)]/30 transition-all duration-500 shadow-lg shadow-black/5">
+      <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-[var(--lux-soft)] border border-[var(--lux-border)] text-[var(--lux-muted)] group-hover:text-[var(--lux-gold)] transition-colors duration-500">
+        <ClockIcon size={14} strokeWidth={2.5} />
+      </div>
+      <div className="flex flex-col">
+        <span className="text-[11px] font-black uppercase tracking-tighter text-[var(--lux-text)] leading-none">
+          {formatTime(time)}
+        </span>
+        <span className="text-[8px] font-bold uppercase tracking-widest text-[var(--lux-muted)] mt-0.5 whitespace-nowrap">
+          {formatDate(time)}
+        </span>
+      </div>
+    </div>
+  );
+};
+
 
 export const Header = ({ theme, setTheme, onMenuClick, hotelName, bookedCount, arrivalsCount }: any) => {
   return (
@@ -28,7 +74,8 @@ export const Header = ({ theme, setTheme, onMenuClick, hotelName, bookedCount, a
        </div>
        
        <div className="flex items-center gap-6">
-          <div className="hidden md:flex items-center gap-4 border-l border-[var(--lux-border)] pl-6">
+           <LiveClock />
+           <div className="hidden md:flex items-center gap-4 border-l border-[var(--lux-border)] pl-6">
              <div className="text-right">
                 <p className="text-[10px] font-bold text-green-500 uppercase leading-none">{bookedCount} ACTIVE</p>
                 <p className="text-[7px] font-black uppercase opacity-40 mt-1 tracking-tighter">Live Bookings</p>
@@ -62,13 +109,14 @@ export const Header = ({ theme, setTheme, onMenuClick, hotelName, bookedCount, a
   );
 };
 
-export const Sidebar = ({ isOpen, setIsOpen, onLogout }: any) => {
+export const Sidebar = ({ theme, isOpen, setIsOpen, onLogout }: any) => {
   const location = useLocation();
   const navItems = [
     { icon: LayoutGrid, label: 'Room Grid', path: '/dashboard' },
     { icon: UserPlus, label: 'Reception', path: '/reception' },
     { icon: Sparkles, label: 'Future Booking', path: '/future-booking' },
     { icon: Calendar, label: 'Bookings', path: '/bookings' },
+    { icon: CreditCard, label: 'Payments', path: '/payments' },
   ];
 
   return (
@@ -79,9 +127,12 @@ export const Sidebar = ({ isOpen, setIsOpen, onLogout }: any) => {
         )}
       </AnimatePresence>
       <aside className={`fixed top-0 left-0 bottom-0 w-[280px] bg-[var(--lux-card)] border-r border-[var(--lux-border)] z-50 transition-transform duration-500 lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-         <div className="p-10 border-b border-[var(--lux-border)]">
-            <h1 className="text-2xl font-display font-bold italic tracking-tighter mb-1">BHAGAT GROUP</h1>
-            <p className="text-[8px] font-black uppercase tracking-[0.4em] opacity-40">Core Console v4</p>
+         <div className="px-6 pt-0 pb-2 border-b border-[var(--lux-border)] flex justify-center overflow-hidden">
+            <img 
+               src="/logo.jpg" 
+               alt="Bhagat Group" 
+               className={`w-full h-auto brightness-110 transition-all duration-300 -mt-2 ${theme === 'dark' ? 'mix-blend-screen invert-0' : 'mix-blend-multiply invert-[1]'}`} 
+            />
          </div>
          <nav className="p-6 space-y-2">
             {navItems.map((item) => (
@@ -89,7 +140,7 @@ export const Sidebar = ({ isOpen, setIsOpen, onLogout }: any) => {
                 key={item.path}
                 to={item.path}
                 onClick={() => setIsOpen(false)}
-                className={`flex items-center gap-4 px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${location.pathname === item.path ? 'bg-[var(--lux-gold)] text-black shadow-xl shadow-[var(--lux-gold)]/20 scale-[1.02]' : 'text-[var(--lux-muted)] hover:bg-white/5 hover:text-white'}`}
+                className={`flex items-center gap-4 px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${location.pathname === item.path ? 'bg-[var(--lux-gold)] text-black shadow-xl shadow-[var(--lux-gold)]/20 scale-[1.02]' : 'text-[var(--lux-muted)] hover:bg-[var(--lux-gold)]/5 hover:text-[var(--lux-gold)]'}`}
               >
                  <item.icon size={16} />
                  <span>{item.label}</span>
@@ -116,6 +167,8 @@ export const BottomActionBar = () => {
   const tabs = [
     { icon: LayoutGrid, path: '/dashboard', label: 'Grid' },
     { icon: UserPlus, path: '/reception', label: 'Check-in' },
+    { icon: Sparkles, path: '/future-booking', label: 'Future' },
+    { icon: CreditCard, path: '/payments', label: 'Revenue' },
     { icon: Calendar, path: '/bookings', label: 'Ledger' }
   ];
 

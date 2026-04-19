@@ -123,6 +123,7 @@ export const BookingsManagement = ({ activeHotelId, onWalkInClick, onInvoiceClic
                   <tr className="bg-black/20 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--lux-muted)] border-b border-white/5">
                      <th className="p-6">Guest / Dossier</th>
                      <th className="p-6">Stay Architecture</th>
+                     <th className="p-6">Source</th>
                      <th className="p-6">Ledger Performance</th>
                      <th className="p-6">Status</th>
                      <th className="p-6 text-right">Operations</th>
@@ -151,6 +152,18 @@ export const BookingsManagement = ({ activeHotelId, onWalkInClick, onInvoiceClic
                                   <Calendar size={12} />
                                   <span>{new Date(b.checkin).toLocaleDateString()} — {new Date(b.checkout).toLocaleDateString()}</span>
                                </div>
+                            </div>
+                         </td>
+                         <td className="p-6">
+                            <div className="flex flex-col gap-1">
+                               <span className={`px-3 py-1 rounded text-[9px] font-black uppercase tracking-widest inline-block text-center ${b.bookingSource === 'ota' ? 'bg-[var(--lux-gold)]/10 text-[var(--lux-gold)] border border-[var(--lux-gold)]/20' : 'bg-white/5 text-white/40'}`}>
+                                  {b.bookingSource === 'ota' ? b.bookingPlatform : 'Direct'}
+                               </span>
+                               {b.bookingSource === 'ota' && (
+                                 <span className={`text-[7px] font-bold uppercase tracking-tighter text-center ${b.otaPaymentType === 'paid_online' ? 'text-green-500' : 'text-yellow-500'}`}>
+                                    {b.otaPaymentType === 'paid_online' ? 'Pre-Paid' : 'Pay at Hotel'}
+                                 </span>
+                               )}
                             </div>
                          </td>
                          <td className="p-6">

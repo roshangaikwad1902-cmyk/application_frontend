@@ -37,8 +37,14 @@ export const ReceptionConsole = ({ activeHotelId, onHotelChange }: { activeHotel
   const { data: allHotels = [], isLoading: loadingHotels } = useHotelsList();
   const [activeView, setActiveView] = useState<'dashboard' | 'form'>('dashboard');
   
-  const [checkInDate, setCheckInDate] = useState(new Date().toISOString().split('T')[0]);
-  const [checkOutDate, setCheckOutDate] = useState(new Date(Date.now() + 86400000).toISOString().split('T')[0]);
+  const getLocalDateStr = (offsetDays = 0) => {
+    const d = new Date();
+    if (offsetDays) d.setDate(d.getDate() + offsetDays);
+    return d.toLocaleDateString('en-CA');
+  };
+
+  const [checkInDate, setCheckInDate] = useState(getLocalDateStr());
+  const [checkOutDate, setCheckOutDate] = useState(getLocalDateStr(1));
   
   const { data: activeBookings = [] } = useActiveBookings(activeHotelId);
   const { data: physicalStatuses = [] } = useRoomStatus(activeHotelId);
@@ -53,10 +59,11 @@ export const ReceptionConsole = ({ activeHotelId, onHotelChange }: { activeHotel
   const [formData, setFormData] = useState({ 
     name: '', phone: '', email: '', guests: 1,
     roomNumber: '', roomType: '', hotelName: '',
-    checkin: new Date().toISOString().split('T')[0],
-    checkout: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+    checkin: getLocalDateStr(),
+    checkout: getLocalDateStr(1),
     totalAmount: 0, paidAmount: 0, offlinePaid: 0, onlinePaid: 0, 
     paymentMethod: 'Partial', paymentStatus: 'Paid',
+    bookingSource: 'walk_in', bookingPlatform: '', otaPaymentType: 'pay_at_hotel',
     photo: '', aadharFront: '', aadharBack: '', otherDoc: ''
   });
 
@@ -101,6 +108,42 @@ export const ReceptionConsole = ({ activeHotelId, onHotelChange }: { activeHotel
     });
   }, [unifiedBookings, searchTerm]);
 
+  // Auto-suggest logic
+  useEffect(() => {
+    if (formData.phone.length === 10) {
+      const pastBooking = unifiedBookings.find((b: any) => b.guestDetails?.phone === formData.phone);
+      if (pastBooking) {
+        setFormData(prev => ({ 
+          ...prev, 
+          name: pastBooking.guestDetails?.name || prev.name,
+          email: pastBooking.guestDetails?.email || prev.email,
+          bookingSource: pastBooking.bookingSource || 'walk_in',
+          bookingPlatform: pastBooking.bookingPlatform || '',
+          otaPaymentType: pastBooking.otaPaymentType || 'pay_at_hotel'
+        }));
+        if (pastBooking.bookingPlatform) {
+          toast.info(`Returning Guest: ${pastBooking.guestDetails?.name}. Last Source: ${pastBooking.bookingPlatform}`);
+        } else {
+          toast.info(`Returning Guest: ${pastBooking.guestDetails?.name}`);
+        }
+      }
+    }
+  }, [formData.phone, unifiedBookings]);
+
+  // Handle OTA Payment Logic
+  useEffect(() => {
+    if (formData.bookingSource === 'ota' && formData.otaPaymentType === 'paid_online') {
+      setFormData(prev => ({
+        ...prev,
+        offlinePaid: 0,
+        onlinePaid: 0,
+        paidAmount: prev.totalAmount,
+        paymentStatus: 'Paid'
+      }));
+    }
+  }, [formData.bookingSource, formData.otaPaymentType, formData.totalAmount]);
+
+
   const handleWalkInSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -117,11 +160,14 @@ export const ReceptionConsole = ({ activeHotelId, onHotelChange }: { activeHotel
         },
         paymentDetails: {
           totalAmount: Number(formData.totalAmount) || 0,
-          paidAmount: (Number(formData.offlinePaid) || 0) + (Number(formData.onlinePaid) || 0),
+          paidAmount: formData.bookingSource === 'ota' && formData.otaPaymentType === 'paid_online' ? Number(formData.totalAmount) : (Number(formData.offlinePaid) || 0) + (Number(formData.onlinePaid) || 0),
           offlinePaid: Number(formData.offlinePaid) || 0,
           onlinePaid: Number(formData.onlinePaid) || 0,
           paymentMethod: formData.paymentMethod,
-          paymentStatus: formData.paymentStatus
+          paymentStatus: formData.bookingSource === 'ota' && formData.otaPaymentType === 'paid_online' ? 'paid' : formData.paymentStatus,
+          bookingSource: formData.bookingSource,
+          bookingPlatform: formData.bookingPlatform,
+          otaPaymentType: formData.otaPaymentType
         }
       };
 
@@ -236,16 +282,71 @@ export const ReceptionConsole = ({ activeHotelId, onHotelChange }: { activeHotel
                    <PremiumDatePicker label="Check-out Date" value={formData.checkout} onChange={(v: string) => setFormData({...formData, checkout: v})} />
                 </div>
 
+                {/* NEW: Booking Source Section */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                   <div className="md:col-span-2 flex items-center gap-3 border-b pb-4">
+                      <LayoutGrid size={16} className="text-[var(--lux-gold)]" />
+                      <h4 className="text-[12px] font-black uppercase tracking-widest">Booking Source</h4>
+                   </div>
+                   <div className="md:col-span-2 flex p-1 bg-black/5 dark:bg-black/20 rounded-xl border border-[var(--lux-border)]">
+                      {[{ id: 'walk_in', label: 'Walk-in' }, { id: 'ota', label: 'Online Platform' }].map(s => (
+                        <button key={s.id} type="button" onClick={() => setFormData({...formData, bookingSource: s.id as any})} className={`flex-1 py-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${formData.bookingSource === s.id ? 'bg-[var(--lux-gold)] text-black shadow-lg' : 'text-[var(--lux-muted)] hover:text-[var(--lux-text)]'}`}>
+                          {s.label}
+                        </button>
+                      ))}
+                   </div>
+                   
+                   {formData.bookingSource === 'ota' && (
+                     <>
+                        <NormalSelect 
+                          label="Select Platform" 
+                          value={formData.bookingPlatform} 
+                          onChange={(v: string) => setFormData({...formData, bookingPlatform: v})} 
+                          options={[
+                            { value: 'OYO', label: 'OYO' },
+                            { value: 'GoMMT', label: 'GoMMT' },
+                            { value: 'Booking.com', label: 'Booking.com' },
+                            { value: 'Agoda', label: 'Agoda' },
+                            { value: 'Trivago', label: 'Trivago' },
+                            { value: 'HotelMate', label: 'HotelMate' }
+                          ]} 
+                        />
+                        <div className="premium-input-container">
+                           <label className="normal-label">Payment Status Type</label>
+                           <div className="flex gap-2">
+                              {[{ id: 'paid_online', label: 'Fully Paid Online' }, { id: 'pay_at_hotel', label: 'Pay at Hotel' }].map(p => (
+                                <button key={p.id} type="button" onClick={() => setFormData({...formData, otaPaymentType: p.id as any})} className={`flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${formData.otaPaymentType === p.id ? 'bg-[var(--lux-gold)]/10 border-[var(--lux-gold)] text-[var(--lux-gold)] shadow-sm' : 'border-[var(--lux-border)] text-[var(--lux-muted)] hover:text-[var(--lux-text)] hover:border-[var(--lux-muted)]'}`}>
+                                  {p.label}
+                                </button>
+                              ))}
+                           </div>
+                        </div>
+                     </>
+                   )}
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                    <div className="md:col-span-2 flex items-center gap-3 border-b pb-4 pt-4">
                       <CreditCard size={16} className="text-[var(--lux-gold)]" />
                       <h4 className="text-[12px] font-black uppercase tracking-widest">Payment Settlement</h4>
                    </div>
                    <NormalInput label="Total Amount" type="number" value={formData.totalAmount} onChange={(v: string) => setFormData({...formData, totalAmount: parseInt(v)})} />
-                   <NormalInput label="Offline Paid (₹)" type="number" value={formData.offlinePaid} onChange={(v: string) => setFormData({...formData, offlinePaid: parseInt(v)})} />
-                   <NormalInput label="Online Paid (₹)" type="number" value={formData.onlinePaid} onChange={(v: string) => setFormData({...formData, onlinePaid: parseInt(v)})} />
-                   <NormalSelect label="Method" value={formData.paymentMethod} onChange={(v: string) => setFormData({...formData, paymentMethod: v})} options={['Cash', 'UPI', 'Card']} />
+                   
+                   {!(formData.bookingSource === 'ota' && formData.otaPaymentType === 'paid_online') ? (
+                     <>
+                        <NormalInput label="Offline Paid (₹)" type="number" value={formData.offlinePaid} onChange={(v: string) => setFormData({...formData, offlinePaid: parseInt(v)})} />
+                        <NormalInput label="Online Paid (₹)" type="number" value={formData.onlinePaid} onChange={(v: string) => setFormData({...formData, onlinePaid: parseInt(v)})} />
+                        <NormalSelect label="Method" value={formData.paymentMethod} onChange={(v: string) => setFormData({...formData, paymentMethod: v})} options={['Cash', 'UPI', 'Card']} />
+                     </>
+                   ) : (
+                     <div className="md:col-span-2 p-6 bg-green-500/10 border border-green-500/20 rounded-2xl flex flex-col items-center justify-center space-y-2">
+                        <CheckCircle className="text-green-500" size={24} />
+                        <p className="text-[11px] font-black uppercase tracking-widest text-green-500">Fully Paid Settlement via {formData.bookingPlatform}</p>
+                        <p className="text-[9px] font-bold opacity-60">Balance: ₹0 (No manual collection required)</p>
+                     </div>
+                   )}
                 </div>
+
 
                 <div className="space-y-4 pt-4">
                    <div className="flex items-center gap-3 border-b pb-4">

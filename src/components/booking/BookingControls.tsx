@@ -16,7 +16,8 @@ import {
   ShieldCheck, 
   Info,
   ArrowRight,
-  Users
+  Users,
+  MessageCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
@@ -91,6 +92,7 @@ export const BookingDetailsDrawer = ({ booking, isOpen, onClose, onUpdate, onEdi
 
   if (!booking) return null;
   const nights = Math.max(1, Math.ceil((new Date(booking.checkout).getTime() - new Date(booking.checkin).getTime()) / (1000 * 60 * 60 * 24)));
+  const financials = getBookingFinancials(booking);
 
   const handleRecordPayment = async () => {
      const totalUpdateAmount = (Number(cashPayment) || 0) + (Number(upiPayment) || 0);
@@ -157,8 +159,6 @@ export const BookingDetailsDrawer = ({ booking, isOpen, onClose, onUpdate, onEdi
     } catch (err) { toast.error("Update failed"); }
   };
 
-  const financials = getBookingFinancials(booking);
-
   return (
     <AnimatePresence>
       {isOpen && (
@@ -211,9 +211,67 @@ export const BookingDetailsDrawer = ({ booking, isOpen, onClose, onUpdate, onEdi
                     <p className="text-xs text-[var(--lux-muted)] font-bold">{booking.guestDetails?.phone}</p>
                     <p className="text-[9px] text-[var(--lux-gold)] font-black mt-1 uppercase tracking-widest truncate max-w-[200px]">{booking.guestDetails?.email || 'N/A'}</p>
                   </div>
-                  <button type="button" className="w-10 h-10 rounded-full bg-green-500/10 text-green-500 flex items-center justify-center hover:bg-green-500 hover:text-white transition-all shadow-sm">
-                     <Phone size={16} />
-                  </button>
+                   <div className="flex items-center gap-2">
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          const num = booking.guestDetails?.phone?.replace(/\D/g, '');
+                          if (num) window.open(`tel:${num.startsWith('91') ? '+' : ''}${num}`);
+                        }}
+                        className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all shadow-sm"
+                        title="Call Guest"
+                      >
+                         <Phone size={16} />
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const guest = booking.guestDetails;
+                          const fin = financials;
+                          const phone = guest?.phone?.replace(/\D/g, '');
+                          if (!phone) return toast.error("Mobile number missing");
+                          
+                          const formattedPhone = phone.length === 10 ? `91${phone}` : phone;
+                          const guestName = guest.name ? guest.name.charAt(0).toUpperCase() + guest.name.slice(1) : 'Guest';
+
+                          // Use CodePoints to avoid any encoding-related diamond issues
+                          const h = String.fromCodePoint(0x1F3E8); // Hotel
+                          const b = String.fromCodePoint(0x1F4B0); // Money Bag
+                          const w = String.fromCodePoint(0x26A0) + String.fromCodePoint(0xFE0F); // Warning
+                          const s = String.fromCodePoint(0x2705); // Success
+                          const p = String.fromCodePoint(0x1F64F); // Prayer
+                          const r = String.fromCodePoint(0x20B9); // Rupee
+
+                          const messageParts = [
+                            `*Hello ${guestName},*`,
+                            `Your booking invoice from *Hotel Samrat* is ready.`,
+                            `--------------------------------`,
+                            `${h} *STAY DETAILS*`,
+                            `--------------------------------`,
+                            `*Room:* ${booking.roomNumber || '---'}`,
+                            `*Check-in:* ${new Date(booking.checkin).toLocaleDateString('en-IN')}`,
+                            `*Check-out:* ${new Date(booking.checkout).toLocaleDateString('en-IN')}`,
+                            `--------------------------------`,
+                            `${b} *BILLING SUMMARY*`,
+                            `--------------------------------`,
+                            `*Total Amount:* ${r}${fin.total}`,
+                            `*Paid:* ${r}${fin.paid}`,
+                            fin.balance > 0 ? `*${w} Balance:* ${r}${fin.balance}` : `${s} *Payment Completed*`,
+                            `\nThank you for choosing us! ${p}`
+                          ];
+
+                          const finalMessage = messageParts.join('\n');
+                          toast.info("Opening WhatsApp...");
+                          window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(finalMessage)}`, '_blank');
+                        }}
+                        className="w-10 h-10 rounded-full bg-green-500/10 text-green-500 flex items-center justify-center hover:bg-green-500 hover:text-white transition-all shadow-sm hover:shadow-[0_0_15px_rgba(34,197,94,0.4)]"
+                        title="Send Invoice via WhatsApp"
+                      >
+                         <MessageCircle size={16} />
+                      </button>
+                   </div>
                 </div>
               </div>
 
@@ -256,7 +314,25 @@ export const BookingDetailsDrawer = ({ booking, isOpen, onClose, onUpdate, onEdi
 
                  <div className="h-px bg-[var(--lux-border)] opacity-20" />
 
-                 <div className="grid grid-cols-2 gap-6 relative">
+                 <div className="flex justify-between items-center px-2">
+                     <div className="space-y-1">
+                        <p className="text-[8px] font-black uppercase text-[var(--lux-muted)]">Booking Source</p>
+                        <div className="flex items-center gap-2">
+                           <span className={`px-3 py-1 rounded text-[9px] font-black uppercase tracking-widest ${booking.bookingSource === 'ota' ? 'bg-[var(--lux-gold)]/20 text-[var(--lux-gold)]' : 'bg-white/5 text-white/40'}`}>
+                              {booking.bookingSource === 'ota' ? booking.bookingPlatform : 'Direct'}
+                           </span>
+                           {booking.bookingSource === 'ota' && (
+                             <span className={`text-[8px] font-bold uppercase tracking-widest ${booking.otaPaymentType === 'paid_online' ? 'text-green-500' : 'text-yellow-500'}`}>
+                                ({booking.otaPaymentType === 'paid_online' ? 'Pre-Paid' : 'Pay at Hotel'})
+                             </span>
+                           )}
+                        </div>
+                     </div>
+                  </div>
+
+                  <div className="h-px bg-[var(--lux-border)] opacity-20" />
+
+                  <div className="grid grid-cols-2 gap-6 relative">
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-[var(--lux-bg)] border border-[var(--lux-border)] rounded-full flex items-center justify-center text-[8px] font-black uppercase text-[var(--lux-gold)] z-10 shadow-sm">
                        {nights}N
                     </div>
@@ -429,7 +505,10 @@ export const EditBookingDrawer = ({ booking, isOpen, onClose, onUpdate }: any) =
         totalAmount: booking.totalAmount || 0,
         paidAmount: booking.paidAmount || 0,
         offlinePaid: booking.offlinePaid || 0,
-        onlinePaid: booking.onlinePaid || 0
+        onlinePaid: booking.onlinePaid || 0,
+        bookingSource: booking.bookingSource || 'walk_in',
+        bookingPlatform: booking.bookingPlatform || '',
+        otaPaymentType: booking.otaPaymentType || 'pay_at_hotel'
       });
     }
   }, [booking]);
@@ -452,7 +531,10 @@ export const EditBookingDrawer = ({ booking, isOpen, onClose, onUpdate }: any) =
             paidAmount: (Number(formData.offlinePaid) || 0) + (Number(formData.onlinePaid) || 0),
             offlinePaid: Number(formData.offlinePaid) || 0,
             onlinePaid: Number(formData.onlinePaid) || 0
-          }
+          },
+          bookingSource: formData.bookingSource,
+          bookingPlatform: formData.bookingPlatform,
+          otaPaymentType: formData.otaPaymentType
         })
       });
       if (res.ok) {
@@ -497,6 +579,45 @@ export const EditBookingDrawer = ({ booking, isOpen, onClose, onUpdate }: any) =
                       <NormalInput label="Check-out" type="date" value={formData.checkout} onChange={(v: string) => setFormData({...formData, checkout: v})} required />
                    </div>
                    <NormalInput label="Room Number" value={formData.roomNumber} onChange={(v: string) => setFormData({...formData, roomNumber: v})} />
+                </div>
+
+                <div className="space-y-4 pt-4 border-t border-white/5">
+                   <p className="text-[8px] font-black uppercase tracking-widest text-[var(--lux-muted)]">Source & Platform</p>
+                   <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col gap-2">
+                         <label className="text-[9px] font-bold uppercase opacity-40">Source</label>
+                         <select 
+                           value={formData.bookingSource} onChange={(e) => setFormData({...formData, bookingSource: e.target.value})}
+                           className="bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-[11px] font-bold text-white outline-none focus:border-[var(--lux-gold)]"
+                         >
+                            <option value="walk_in">Walk-in</option>
+                            <option value="ota">OTA Platform</option>
+                         </select>
+                      </div>
+                      {formData.bookingSource === 'ota' && (
+                        <div className="flex flex-col gap-2">
+                           <label className="text-[9px] font-bold uppercase opacity-40">Platform</label>
+                           <select 
+                             value={formData.bookingPlatform} onChange={(e) => setFormData({...formData, bookingPlatform: e.target.value})}
+                             className="bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-[11px] font-bold text-white outline-none focus:border-[var(--lux-gold)]"
+                           >
+                              {['OYO', 'GoMMT', 'Booking.com', 'Agoda'].map(p => <option key={p} value={p}>{p}</option>)}
+                           </select>
+                        </div>
+                      )}
+                   </div>
+                   {formData.bookingSource === 'ota' && (
+                     <div className="flex flex-col gap-2">
+                        <label className="text-[9px] font-bold uppercase opacity-40">OTA Payment Type</label>
+                        <div className="flex gap-2">
+                           {[{id: 'paid_online', label: 'Paid Online'}, {id: 'pay_at_hotel', label: 'Pay at Hotel'}].map(pt => (
+                             <button key={pt.id} type="button" onClick={() => setFormData({...formData, otaPaymentType: pt.id})} className={`flex-1 py-3 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all ${formData.otaPaymentType === pt.id ? 'border-[var(--lux-gold)] text-[var(--lux-gold)] bg-[var(--lux-gold)]/5' : 'border-white/5 text-white/40'}`}>
+                               {pt.label}
+                             </button>
+                           ))}
+                        </div>
+                     </div>
+                   )}
                 </div>
 
                 <div className="space-y-4 pt-4 border-t border-white/5">

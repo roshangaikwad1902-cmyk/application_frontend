@@ -6,22 +6,38 @@ export const DetailedInvoice = ({ booking, hotel }: { booking: any, hotel: any }
   if (!booking) return null;
   const financials = getBookingFinancials(booking);
   
-  // Logic for taxes (12% total, split 6% CGST / 6% SGST as per common Indian hotel standards)
-  const baseRate = financials.roomTotal;
-  const sgst = baseRate * 0.06;
-  const cgst = baseRate * 0.06;
-  const taxableAmount = baseRate;
-  const totalCharges = baseRate + sgst + cgst + financials.extrasTotal;
+  // Logic for taxes (5% total inclusive as per user request, split 2.5% CGST / 2.5% SGST)
+  const grossRoom = financials.roomTotal;
+  const grossExtras = financials.extrasTotal;
+  const totalGross = grossRoom + grossExtras;
+  
+  const taxableAmount = totalGross / 1.05;
+  const totalTax = totalGross - taxableAmount;
+  const sgst = totalTax / 2;
+  const cgst = totalTax / 2;
+  
+  const roomBase = grossRoom / 1.05;
+  const totalCharges = totalGross;
 
   return (
     <div className="a4-page p-10 bg-white text-black font-sans text-[10px] leading-relaxed relative">
-      {/* Header */}
-      <div className="text-center mb-6 border-b border-black pb-4">
-        <h2 className="text-sm font-black uppercase tracking-widest">Invoice</h2>
-        <h1 className="text-xl font-bold mt-1 text-gray-900">{hotel?.name || 'Hotel Rama Palace'}</h1>
-        <p className="font-bold opacity-80 mt-1">GSTIN No : 27ABCCS3946C1ZG</p>
-        <p className="mt-1 opacity-70">near sita gumpha & kalaram temple, Nashik, Maharashtra, 422003, India</p>
-        <p className="mt-0.5 opacity-70">Phone : 8888303650; E-mail : vaibhavbhagat53@gmail.com;</p>
+      {/* Header Grid: [Spacer (Left)] [Text (Center)] [Logo (Right)] */}
+      <div className="grid grid-cols-[100px_1fr_100px] items-center mb-6 border-b border-black pb-4">
+        <div className="w-[100px]"></div> {/* Left Spacer to balance centering */}
+        <div className="text-center">
+          <h2 className="text-sm font-black uppercase tracking-widest text-gray-400">Invoice</h2>
+          <h1 className="text-xl font-bold mt-1 text-gray-900 tracking-tight">{hotel?.name || 'Hotel Samrat'}</h1>
+          <p className="font-bold opacity-80 mt-1 text-[11px]">GSTIN No : 27ABCCS3946C1ZG</p>
+          <p className="mt-1 opacity-70 text-[10px]">near sita gumpha & kalaram temple, Nashik, Maharashtra, 422003, India</p>
+          <p className="mt-0.5 opacity-70 text-[10px]">Phone : 8888303650; E-mail : vaibhavbhagat53@gmail.com;</p>
+        </div>
+        <div className="flex justify-end pr-2">
+          <img 
+            src="/logo.jpg" 
+            alt="Hotel Logo" 
+            className="h-16 w-auto object-contain mix-blend-multiply" 
+          />
+        </div>
       </div>
 
       {/* Summary Grid */}
@@ -34,18 +50,18 @@ export const DetailedInvoice = ({ booking, hotel }: { booking: any, hotel: any }
             <span className="font-bold">Bill To Address</span><span>:</span><span></span>
             <span className="font-bold">State</span><span>:</span><span>Maharashtra</span>
             <span className="font-bold">Bill To GSTIN No</span><span>:</span><span></span>
-            <span className="font-bold">Source</span><span>:</span><span>Walk In</span>
+            <span className="font-bold">Source</span><span>:</span><span className="uppercase">{booking.bookingSource === 'ota' ? booking.bookingPlatform : 'Walk In'}</span>
             <span className="font-bold">Source Of Supply</span><span>:</span><span>Nashik</span>
         </div>
         <div className="grid grid-cols-[120px_10px_1fr] items-center">
             <span className="font-bold">G.R. Card No</span><span>:</span><span>{booking._id?.slice(-4).toUpperCase()}</span>
-            <span className="font-bold">Date of Invoice</span><span>:</span><span>{new Date().toLocaleString()}</span>
+            <span className="font-bold">Date of Invoice</span><span>:</span><span>{new Date().toLocaleString('en-IN')}</span>
             <span className="font-bold">Room</span><span>:</span><span>{booking.roomType} / {booking.roomNumber}</span>
             <span className="font-bold">No of Person</span><span>:</span><span>{booking.guests || 2} (A) / 0 (C)</span>
             <span className="font-bold">Rate Type</span><span>:</span><span>EP</span>
             <span className="font-bold">No of Nights</span><span>:</span><span>{Math.max(1, Math.ceil((new Date(booking.checkout).getTime() - new Date(booking.checkin).getTime()) / (1000 * 60 * 60 * 24)))}</span>
-            <span className="font-bold">Date of Arrival</span><span>:</span><span>{new Date(booking.checkin).toLocaleString()}</span>
-            <span className="font-bold">Date of Departure</span><span>:</span><span>{new Date(booking.checkout).toLocaleString()}</span>
+            <span className="font-bold">Date of Arrival</span><span>:</span><span>{new Date(booking.checkin).toLocaleString('en-IN')}</span>
+            <span className="font-bold">Date of Departure</span><span>:</span><span>{(booking.checked_out_at ? new Date(booking.checked_out_at) : new Date(booking.checkout)).toLocaleString('en-IN')}</span>
         </div>
       </div>
 
@@ -73,32 +89,35 @@ export const DetailedInvoice = ({ booking, hotel }: { booking: any, hotel: any }
             <td className="border border-black px-2 py-2">Room Charges</td>
             <td className="border border-black px-2 py-2 text-center">996311</td>
             <td className="border border-black px-2 py-2 text-center">1</td>
-            <td className="border border-black px-2 py-2 text-right">{financials.roomTotal.toFixed(2)}</td>
-            <td className="border border-black px-2 py-2 text-right">{financials.roomTotal.toFixed(2)}</td>
+            <td className="border border-black px-2 py-2 text-right">{roomBase.toFixed(2)}</td>
+            <td className="border border-black px-2 py-2 text-right">{roomBase.toFixed(2)}</td>
             <td className="border border-black px-2 py-2 text-right">0.00</td>
-            <td className="border border-black px-2 py-2 text-right">{financials.roomTotal.toFixed(2)}</td>
-            <td className="border border-black px-2 py-2 text-right">6.00%</td>
-            <td className="border border-black px-2 py-2 text-right">6.00%</td>
+            <td className="border border-black px-2 py-2 text-right">{roomBase.toFixed(2)}</td>
+            <td className="border border-black px-2 py-2 text-right">2.50%</td>
+            <td className="border border-black px-2 py-2 text-right">2.50%</td>
             <td className="border border-black px-2 py-2 text-right">0.00%</td>
             <td className="border border-black px-2 py-2 text-right">0.00</td>
           </tr>
           {/* Extras as individual rows if needed, or grouped */}
-          {(booking.extraCharges || []).map((e: any, i: number) => (
-             <tr key={i}>
-                <td className="border border-black px-2 py-2 text-center">{i + 2}</td>
-                <td className="border border-black px-2 py-2">{e.name}</td>
-                <td className="border border-black px-2 py-2 text-center"></td>
-                <td className="border border-black px-2 py-2 text-center">1</td>
-                <td className="border border-black px-2 py-2 text-right">{e.price.toFixed(2)}</td>
-                <td className="border border-black px-2 py-2 text-right">{e.price.toFixed(2)}</td>
-                <td className="border border-black px-2 py-2 text-right">0.00</td>
-                <td className="border border-black px-2 py-2 text-right">{e.price.toFixed(2)}</td>
-                <td className="border border-black px-2 py-2 text-right">0.00</td>
-                <td className="border border-black px-2 py-2 text-right">0.00</td>
-                <td className="border border-black px-2 py-2 text-right">0.00</td>
-                <td className="border border-black px-2 py-2 text-right">0.00</td>
-             </tr>
-          ))}
+          {(booking.extraCharges || []).map((e: any, i: number) => {
+             const eBase = e.price / 1.05;
+             return (
+               <tr key={i}>
+                  <td className="border border-black px-2 py-2 text-center">{i + 2}</td>
+                  <td className="border border-black px-2 py-2">{e.name}</td>
+                  <td className="border border-black px-2 py-2 text-center"></td>
+                  <td className="border border-black px-2 py-2 text-center">1</td>
+                  <td className="border border-black px-2 py-2 text-right">{eBase.toFixed(2)}</td>
+                  <td className="border border-black px-2 py-2 text-right">{eBase.toFixed(2)}</td>
+                  <td className="border border-black px-2 py-2 text-right">0.00</td>
+                  <td className="border border-black px-2 py-2 text-right">{eBase.toFixed(2)}</td>
+                  <td className="border border-black px-2 py-2 text-right">2.50%</td>
+                  <td className="border border-black px-2 py-2 text-right">2.50%</td>
+                  <td className="border border-black px-2 py-2 text-right">0.00%</td>
+                  <td className="border border-black px-2 py-2 text-right">0.00</td>
+               </tr>
+             );
+          })}
           {/* Empty rows to fill space */}
           {[...Array(Math.max(0, 3 - (booking.extraCharges?.length || 0)))].map((_, i) => (
             <tr key={`empty-${i}`}>

@@ -8,23 +8,29 @@
   :root {
     /* DARK THEME (Premium SaaS Upgrade) */
     --lux-bg: #0B0B0C;
-    --lux-card: #141416;
+    --lux-card: #121214;
     --lux-soft: #18181B;
-    --lux-text: #FFFFFF;
-    --lux-muted: #71717A;
-    --lux-border: #222222;
+    --lux-text: #F5F5F7;
+    --lux-text-secondary: #B1B1B8;
+    --lux-text-muted: #88888F;
+    --lux-border: #2A2A2E;
     --lux-gold: #D4AF37;
-    --lux-gold-light: #EBC04D;
-    --lux-glass: rgba(20, 20, 22, 0.7);
+    --lux-gold-light: #E6C15A;
+    --lux-gold-bg: rgba(212, 175, 55, 0.12);
+    --lux-glass: rgba(18, 18, 20, 0.7);
 
     /* Ultra Vibrant Status Palette */
     --lux-available-bg: #FFFFFF;
     --lux-available-border: #E5E7EB;
     --lux-available-text: #1C1C1C;
 
-    --lux-booked-bg: #22c55e;
-    --lux-booked-border: #16a34a;
+    --lux-booked-bg: #22C55E;
+    --lux-booked-border: rgba(34, 197, 94, 0.25);
     --lux-booked-text: #FFFFFF;
+
+    --lux-green: #22C55E;
+    --lux-green-bg: rgba(34, 197, 94, 0.12);
+    --lux-green-border: rgba(34, 197, 94, 0.25);
 
     --lux-cleaning-bg: #F59E0B;
     --lux-cleaning-border: #B45309;
@@ -36,7 +42,7 @@
 
     /* Grid View Specifics */
     --lux-grid-available: #f4f4f5;
-    --lux-grid-booked: #ef4444;
+    --lux-grid-booked: #22C55E;
     --lux-grid-dirty: #78350f;
     --lux-grid-cleaning: #facc15;
 
@@ -54,21 +60,21 @@
     --lux-gold: #C8A96A;
     --lux-gold-light: #E6D3A3;
 
-    --lux-available-bg: #D1FAE5;
-    --lux-available-border: #10B981;
-    --lux-available-text: #064E3B;
+    --lux-available-bg: #FFFFFF;
+    --lux-available-border: #E5E7EB;
+    --lux-available-text: #1C1C1C;
 
-    --lux-booked-bg: #FEE2E2;
-    --lux-booked-border: #EF4444;
-    --lux-booked-text: #7F1D1D;
+    --lux-booked-bg: #22C55E;
+    --lux-booked-border: rgba(34, 197, 94, 0.25);
+    --lux-booked-text: #FFFFFF;
 
-    --lux-cleaning-bg: #FEF3C7;
-    --lux-cleaning-border: #F59E0B;
-    --lux-cleaning-text: #78350F;
+    --lux-cleaning-bg: #FACC15;
+    --lux-cleaning-border: #EAB308;
+    --lux-cleaning-text: #000000;
 
-    --lux-dirty-bg: #D7CCC8;
-    --lux-dirty-border: #8D6E63;
-    --lux-dirty-text: #1C1C1C;
+    --lux-dirty-bg: #EF4444;
+    --lux-dirty-border: #DC2626;
+    --lux-dirty-text: #FFFFFF;
   }
 
   /* Room Card Premium System */
@@ -124,9 +130,16 @@
   }
 
   .room-box-saas {
-    @apply relative flex flex-col justify-between p-5 rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden;
-    height: 160px;
-    min-height: 160px;
+    @apply relative flex flex-col justify-between p-5 rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden w-full;
+    height: 140px;
+    min-height: 140px;
+  }
+
+  @media (min-width: 640px) {
+    .room-box-saas {
+      height: 160px;
+      min-height: 160px;
+    }
   }
 
   .room-box-saas:hover {
@@ -258,7 +271,7 @@
   }
   
   .premium-input {
-    @apply w-full h-12 bg-[#161616] border border-white/10 rounded-xl px-4 text-sm font-medium text-white transition-all duration-300 outline-none placeholder:text-white/30;
+    @apply w-full h-12 bg-[#0F0F10] border border-[var(--lux-border)] rounded-xl px-4 text-sm font-medium text-[var(--lux-text)] transition-all duration-300 outline-none placeholder:text-[var(--lux-text-muted)];
   }
   
   .premium-input:focus {
@@ -271,7 +284,7 @@
   }
   
   .segmented-item {
-    @apply flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-all duration-300 rounded-lg;
+    @apply flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-all duration-300 rounded-lg text-[var(--lux-text-secondary)];
   }
 
   /* SaaS Primary Button */

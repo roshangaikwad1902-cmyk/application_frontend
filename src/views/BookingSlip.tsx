@@ -8,8 +8,13 @@ export const BookingSlip = ({ booking, hotel }: { booking: any, hotel: any }) =>
 
   return (
     <div className="a4-page p-12 bg-white text-black font-sans shadow-none border-none">
-      <div className="text-center mb-10 border-b-2 border-dashed border-gray-300 pb-8">
-        <h1 className="text-3xl font-black uppercase tracking-widest mb-1">{hotel?.name || 'BHAGAT GROUP'}</h1>
+      <div className="flex flex-col items-center text-center mb-10 border-b-2 border-dashed border-gray-300 pb-8">
+        <img 
+          src="/logo.jpg" 
+          alt="Bhagat Group" 
+          className="h-24 w-auto mix-blend-multiply invert-[1] brightness-90 contrast-125 mb-4" 
+        />
+        <h1 className="text-xl font-black uppercase tracking-widest mb-1">{hotel?.name}</h1>
         <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.3em]">Official Reservation Manifest</p>
       </div>
 
@@ -39,6 +44,15 @@ export const BookingSlip = ({ booking, hotel }: { booking: any, hotel: any }) =>
           </div>
         </div>
         <div className="space-y-6">
+           <div>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Booking Source</p>
+            <p className="font-bold uppercase">{booking.bookingSource === 'ota' ? booking.bookingPlatform : 'Walk-in'}</p>
+            {booking.bookingSource === 'ota' && (
+              <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">
+                Payment: {booking.otaPaymentType === 'paid_online' ? 'PAID ONLINE' : 'PAY AT HOTEL'}
+              </p>
+            )}
+          </div>
           <div>
             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Assigned Unit</p>
             <p className="font-bold text-lg">Room {booking.roomNumber}</p>
