@@ -75,7 +75,7 @@ export const BookingsManagement = ({ activeHotelId, onWalkInClick, onInvoiceClic
                <p className="text-[8px] font-black uppercase tracking-widest text-[var(--lux-muted)]">Realized Revenue</p>
                <h3 className="text-3xl font-display font-bold text-green-500">₹{stats.revenue}</h3>
             </div>
-            <div className="bg-[var(--lux-card)] p-6 rounded-[2rem] border border-[var(--lux-border)] space-y-1 min-w-[160px] hidden md:block">
+            <div className="bg-[var(--lux-card)] p-6 rounded-[2.5rem] border border-[var(--lux-border)] space-y-1 min-w-[160px] shadow-sm">
                <p className="text-[8px] font-black uppercase tracking-widest text-[var(--lux-muted)]">Unsettled Case</p>
                <h3 className="text-3xl font-display font-bold text-red-500">{stats.pending}</h3>
             </div>
@@ -85,7 +85,7 @@ export const BookingsManagement = ({ activeHotelId, onWalkInClick, onInvoiceClic
             <button type="button" onClick={onWalkInClick} className="flex-1 lg:flex-none px-8 py-4 bg-[var(--lux-gold)] text-black rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-[var(--lux-gold)]/20 hover:scale-105 active:scale-95 transition-all">
                <Plus size={16} /> New Booking
             </button>
-            <button type="button" onClick={() => onReportClick(filteredBookings)} className="flex-1 lg:flex-none px-8 py-4 bg-white/5 border border-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-white/10 transition-all">
+            <button type="button" onClick={() => onReportClick(filteredBookings)} className="flex-1 lg:flex-none px-8 py-4 bg-[var(--lux-soft)] border border-[var(--lux-border)] text-[var(--lux-text)] rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[var(--lux-gold)] hover:text-black hover:border-[var(--lux-gold)] transition-all">
                <Download size={16} /> Audit Export
             </button>
          </div>
@@ -120,7 +120,7 @@ export const BookingsManagement = ({ activeHotelId, onWalkInClick, onInvoiceClic
          <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-left border-collapse">
                <thead>
-                  <tr className="bg-black/20 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--lux-muted)] border-b border-white/5">
+                  <tr className="bg-[var(--lux-soft)]/50 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--lux-muted)] border-b border-[var(--lux-border)]">
                      <th className="p-6">Guest / Dossier</th>
                      <th className="p-6">Stay Architecture</th>
                      <th className="p-6">Source</th>
@@ -129,7 +129,7 @@ export const BookingsManagement = ({ activeHotelId, onWalkInClick, onInvoiceClic
                      <th className="p-6 text-right">Operations</th>
                   </tr>
                </thead>
-               <tbody className="divide-y divide-white/5">
+               <tbody className="divide-y divide-[var(--lux-border)]">
                   {filteredBookings.map((b: any) => {
                     const financials = getBookingFinancials(b);
                     return (
@@ -156,9 +156,9 @@ export const BookingsManagement = ({ activeHotelId, onWalkInClick, onInvoiceClic
                          </td>
                          <td className="p-6">
                             <div className="flex flex-col gap-1">
-                               <span className={`px-3 py-1 rounded text-[9px] font-black uppercase tracking-widest inline-block text-center ${b.bookingSource === 'ota' ? 'bg-[var(--lux-gold)]/10 text-[var(--lux-gold)] border border-[var(--lux-gold)]/20' : 'bg-white/5 text-white/40'}`}>
-                                  {b.bookingSource === 'ota' ? b.bookingPlatform : 'Direct'}
-                               </span>
+                                <span className={`px-3 py-1 rounded text-[9px] font-black uppercase tracking-widest inline-block text-center ${b.bookingSource === 'ota' ? 'bg-[var(--lux-gold)]/10 text-[var(--lux-gold)] border border-[var(--lux-gold)]/20' : 'bg-[var(--lux-soft)] text-[var(--lux-text-secondary)] border border-[var(--lux-border)]'}`}>
+                                   {b.bookingSource === 'ota' ? b.bookingPlatform : 'Direct'}
+                                </span>
                                {b.bookingSource === 'ota' && (
                                  <span className={`text-[7px] font-bold uppercase tracking-tighter text-center ${b.otaPaymentType === 'paid_online' ? 'text-green-500' : 'text-yellow-500'}`}>
                                     {b.otaPaymentType === 'paid_online' ? 'Pre-Paid' : 'Pay at Hotel'}
@@ -167,18 +167,33 @@ export const BookingsManagement = ({ activeHotelId, onWalkInClick, onInvoiceClic
                             </div>
                          </td>
                          <td className="p-6">
-                            <div className="space-y-1.5">
-                               <div className="flex items-center gap-2">
-                                  <CreditCard size={12} className="opacity-40" />
-                                  <p className="text-[11px] font-bold">₹{financials.paid} <span className="opacity-40 text-[9px] ml-1">Paid</span></p>
+                            <div className="space-y-2">
+                               <div className="flex flex-col gap-0.5">
+                                  <div className="flex items-center gap-2">
+                                     <CreditCard size={12} className="opacity-30" />
+                                     <p className="text-[11px] font-bold">₹{financials.paid.toLocaleString()} <span className="opacity-40 text-[9px]">/ ₹{financials.total.toLocaleString()}</span></p>
+                                  </div>
                                </div>
-                               <div className="w-24 h-1.5 bg-white/5 rounded-full overflow-hidden p-0.5 border border-white/5">
-                                  <div className={`h-full rounded-full ${financials.paidPercent === 100 ? 'bg-green-500' : 'bg-[var(--lux-gold)]'}`} style={{ width: `${financials.paidPercent}%` }} />
+                               <div className="w-28 h-2 bg-white/5 rounded-full overflow-hidden p-[1px] border border-white/5 shadow-inner">
+                                  <motion.div 
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${financials.paidPercent}%` }}
+                                    className={`h-full rounded-full transition-all duration-500 ${
+                                      financials.paidPercent === 100 ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 
+                                      financials.paidPercent > 0 ? 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.2)]' : 'bg-transparent'
+                                    }`} 
+                                  />
                                </div>
                             </div>
                          </td>
                          <td className="p-6">
-                            <span className={`px-4 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest ${b.status === 'confirmed' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : b.status === 'completed' ? 'bg-blue-500/10 text-blue-500' : 'bg-white/5 text-[var(--lux-muted)]'}`}>
+                            <span className={`px-4 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest border ${
+                               b.status === 'confirmed' || b.status === 'checked-in' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 
+                               b.status === 'completed' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' : 
+                               b.status === 'reserved' ? 'bg-[var(--lux-gold)]/10 text-[var(--lux-gold)] border-[var(--lux-gold)]/20' :
+                               b.status === 'cancelled' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                               'bg-white/5 text-[var(--lux-muted)] border-white/5'
+                            }`}>
                                {b.status}
                             </span>
                          </td>

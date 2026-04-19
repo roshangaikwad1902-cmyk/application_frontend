@@ -50,6 +50,30 @@ export const FutureBookingPage = ({ activeHotelId, onSlipClick }: any) => {
   // 1. Core State
   const [targetDate, setTargetDate] = useState(getLocalDateStr(2)); // Default +2 days
   const [checkoutDate, setCheckoutDate] = useState(getLocalDateStr(3)); // Default +3 days
+
+  const handleTargetDateChange = (val: string) => {
+    const start = new Date(val);
+    const prevIn = new Date(targetDate);
+    const prevOut = new Date(checkoutDate);
+    const nights = Math.max(1, Math.ceil((prevOut.getTime() - prevIn.getTime()) / (24 * 60 * 60 * 1000)));
+
+    setTargetDate(val);
+    const nextEnd = new Date(start);
+    nextEnd.setDate(nextEnd.getDate() + nights);
+    setCheckoutDate(nextEnd.toLocaleDateString('en-CA'));
+  };
+
+  const handleCheckoutDateChange = (val: string) => {
+    const start = new Date(targetDate);
+    const end = new Date(val);
+    if (end < start) {
+      // Still prevent selecting a date BEFORE check-in
+      setCheckoutDate(targetDate);
+    } else {
+      setCheckoutDate(val);
+    }
+  };
+
   const [selectedRoom, setSelectedRoom] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -78,9 +102,17 @@ export const FutureBookingPage = ({ activeHotelId, onSlipClick }: any) => {
       const bIn = new Date(b.checkin).getTime();
       const bOut = new Date(b.checkout).getTime();
       const tIn = new Date(targetDate).getTime();
-      const tOut = new Date(checkoutDate).getTime();
+      let tOut = new Date(checkoutDate).getTime();
       
-      if (b.roomNumber && (bIn < tOut && bOut > tIn)) {
+      // If same-day query, look for overlaps within that single day
+      if (tIn === tOut) {
+          tOut += 24 * 60 * 60 * 1000;
+      }
+      
+      const isOverlap = bIn < tOut && bOut > tIn;
+      const isSameDayMatch = bIn === tIn && bOut === bIn; // Catch the specific 0-night booking
+
+      if (b.roomNumber && (isOverlap || isSameDayMatch)) {
         bMap.set(b.roomNumber.toString(), b); 
       }
     });
@@ -246,12 +278,12 @@ export const FutureBookingPage = ({ activeHotelId, onSlipClick }: any) => {
               <div className="flex items-center justify-between sm:justify-start gap-3 sm:gap-4 px-3 sm:px-4">
                 <div className="flex flex-col flex-1 sm:flex-none">
                   <span className="text-[8px] font-black uppercase opacity-30">Check-In</span>
-                  <PremiumDatePicker value={targetDate} onChange={setTargetDate} />
+                  <PremiumDatePicker value={targetDate} onChange={handleTargetDateChange} />
                 </div>
                 <ArrowRight size={14} className="opacity-20 mt-3 sm:mt-4 shrink-0" />
                 <div className="flex flex-col flex-1 sm:flex-none">
                   <span className="text-[8px] font-black uppercase opacity-30">Check-Out</span>
-                  <PremiumDatePicker value={checkoutDate} onChange={setCheckoutDate} />
+                  <PremiumDatePicker value={checkoutDate} onChange={handleCheckoutDateChange} />
                 </div>
               </div>
            </div>
@@ -336,13 +368,13 @@ export const FutureBookingPage = ({ activeHotelId, onSlipClick }: any) => {
 
                             {/* Header row */}
                              <div className="flex flex-col">
-                                <span className={`text-[7px] sm:text-[9px] font-black uppercase tracking-widest opacity-40 leading-none mb-1 ${isActive ? 'text-black' : ''}`}>UNIT REGISTRY</span>
-                                <span className={`text-[11px] sm:text-[13px] font-bold leading-none ${isActive ? 'text-black' : ''}`}>#{room.number}</span>
+                                <span className={`text-[7px] sm:text-[9px] font-black uppercase tracking-widest opacity-40 leading-none mb-1 ${isActive ? 'text-black' : 'text-zinc-800'}`}>UNIT REGISTRY</span>
+                                <span className={`text-[11px] sm:text-[13px] font-bold leading-none ${isActive ? 'text-black' : 'text-zinc-800'}`}>#{room.number}</span>
                              </div>
 
                              {/* Body row: Large Number & Price */}
                              <div className="flex flex-col items-center justify-center -translate-y-1 sm:-translate-y-2">
-                                <h4 className={`text-[32px] sm:text-[40px] lg:text-[48px] font-display font-black leading-none tracking-tighter ${isActive ? 'text-black' : ''}`}>{room.number}</h4>
+                                <h4 className={`text-[32px] sm:text-[40px] lg:text-[48px] font-display font-black leading-none tracking-tighter ${isActive ? 'text-black' : 'text-zinc-800'}`}>{room.number}</h4>
                                 <p className={`text-[10px] sm:text-[12px] font-black uppercase tracking-[0.2em] opacity-40 mt-1 ${isActive ? 'text-black/60' : ''}`}>₹{room.price}</p>
                              </div>
 
@@ -351,10 +383,10 @@ export const FutureBookingPage = ({ activeHotelId, onSlipClick }: any) => {
                                 {room.booking ? (
                                   <div className="flex justify-between items-center gap-2 overflow-hidden">
                                      <div className="flex flex-col min-w-0">
-                                        <span className={`text-[12px] font-bold truncate ${isActive ? 'text-black' : ''}`} title={room.booking.guestDetails?.name}>
+                                        <span className={`text-[12px] font-bold truncate ${isActive ? 'text-black' : 'text-zinc-800'}`} title={room.booking.guestDetails?.name}>
                                            {room.booking.guestDetails?.name || 'Future Guest'}
                                         </span>
-                                        <span className={`text-[9px] font-black uppercase tracking-widest opacity-30 ${isActive ? 'text-black/40' : ''}`}>
+                                        <span className={`text-[9px] font-black uppercase tracking-widest opacity-30 ${isActive ? 'text-black/40' : 'text-zinc-800'}`}>
                                            SECURED
                                         </span>
                                      </div>
@@ -483,8 +515,8 @@ export const FutureBookingPage = ({ activeHotelId, onSlipClick }: any) => {
                         </div>
                         {!(formData.bookingSource === 'ota' && formData.otaPaymentType === 'paid_online') ? (
                           <div className="grid grid-cols-2 gap-6">
-                             <NormalInput label="Offline Deposit" type="number" value={formData.offlinePaid} onChange={(v: string) => setFormData({...formData, offlinePaid: parseInt(v) || 0})} />
-                             <NormalInput label="Digital Deposit" type="number" value={formData.onlinePaid} onChange={(v: string) => setFormData({...formData, onlinePaid: parseInt(v) || 0})} />
+                             <NormalInput label="Offline Deposit" type="number" value={formData.offlinePaid || ""} onChange={(v: string) => setFormData({...formData, offlinePaid: parseInt(v) || 0})} />
+                             <NormalInput label="Digital Deposit" type="number" value={formData.onlinePaid || ""} onChange={(v: string) => setFormData({...formData, onlinePaid: parseInt(v) || 0})} />
                           </div>
                         ) : (
                           <div className="p-6 bg-green-500/10 border border-green-500/20 rounded-2xl text-center">

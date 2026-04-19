@@ -4,44 +4,45 @@ import { numberToWords } from '../utils/numberToWords';
 
 export const DetailedInvoice = ({ booking, hotel }: { booking: any, hotel: any }) => {
   if (!booking) return null;
+  const isGST = booking.invoiceType === 'gst';
   const financials = getBookingFinancials(booking);
   
-  // Logic for taxes (5% total inclusive as per user request, split 2.5% CGST / 2.5% SGST)
+  // Custom GST / Non-GST logic
   const grossRoom = financials.roomTotal;
   const grossExtras = financials.extrasTotal;
   const totalGross = grossRoom + grossExtras;
   
-  const taxableAmount = totalGross / 1.05;
-  const totalTax = totalGross - taxableAmount;
+  const totalTax = isGST ? (booking.gstAmount || (totalGross - (totalGross / 1.05))) : 0;
+  const taxableAmount = totalGross - totalTax;
+  
   const sgst = totalTax / 2;
   const cgst = totalTax / 2;
   
-  const roomBase = grossRoom / 1.05;
+  const roomBase = isGST ? (grossRoom / 1.05) : grossRoom;
   const totalCharges = totalGross;
 
   return (
     <div className="a4-page p-10 bg-white text-black font-sans text-[10px] leading-relaxed relative">
-      {/* Header Grid: [Spacer (Left)] [Text (Center)] [Logo (Right)] */}
-      <div className="grid grid-cols-[100px_1fr_100px] items-center mb-6 border-b border-black pb-4">
-        <div className="w-[100px]"></div> {/* Left Spacer to balance centering */}
-        <div className="text-center">
-          <h2 className="text-sm font-black uppercase tracking-widest text-gray-400">Invoice</h2>
-          <h1 className="text-xl font-bold mt-1 text-gray-900 tracking-tight">{hotel?.name || 'Hotel Samrat'}</h1>
-          <p className="font-bold opacity-80 mt-1 text-[11px]">GSTIN No : 27ABCCS3946C1ZG</p>
-          <p className="mt-1 opacity-70 text-[10px]">near sita gumpha & kalaram temple, Nashik, Maharashtra, 422003, India</p>
-          <p className="mt-0.5 opacity-70 text-[10px]">Phone : 8888303650; E-mail : vaibhavbhagat53@gmail.com;</p>
-        </div>
-        <div className="flex justify-end pr-2">
+      <div className="grid grid-cols-[176px_1fr_176px] items-center gap-4 mb-4 border-b border-black pb-8">
+        <div className="w-44 overflow-hidden">
           <img 
             src="/logo.jpg" 
-            alt="Hotel Logo" 
-            className="h-16 w-auto object-contain mix-blend-multiply" 
+            alt="Bhagat Group" 
+            className="w-full h-auto mix-blend-multiply invert-[1] brightness-90 contrast-125" 
           />
         </div>
+        <div className="space-y-1 text-center pt-2">
+          <h2 className="text-[10px] font-black uppercase tracking-widest text-gray-400">{isGST ? 'GST Invoice' : 'Non-GST Bill'}</h2>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tighter leading-tight">{hotel?.name || 'Hotel Samrat'}</h1>
+          <p className="font-bold opacity-80 text-[11px]">GSTIN No : 27ABCCS3946C1ZG</p>
+          <p className="opacity-70 text-[10px]">near sita gumpha & kalaram temple, Nashik, Maharashtra, 422003, India</p>
+          <p className="opacity-70 text-[10px]">Phone : 8888303650; E-mail : vaibhavbhagat53@gmail.com;</p>
+        </div>
+        <div className="w-44" aria-hidden="true" />
       </div>
 
       {/* Summary Grid */}
-      <div className="grid grid-cols-2 gap-x-12 gap-y-1 mb-6">
+      <div className="grid grid-cols-2 gap-x-12 gap-y-1 mb-4">
         <div className="grid grid-cols-[100px_10px_1fr] items-center">
             <span className="font-bold">Folio No.</span><span>:</span><span>{booking._id?.slice(-4).toUpperCase()}</span>
             <span className="font-bold">Invoice No</span><span>:</span><span>{booking._id?.slice(-4).toUpperCase()}</span>
@@ -93,8 +94,8 @@ export const DetailedInvoice = ({ booking, hotel }: { booking: any, hotel: any }
             <td className="border border-black px-2 py-2 text-right">{roomBase.toFixed(2)}</td>
             <td className="border border-black px-2 py-2 text-right">0.00</td>
             <td className="border border-black px-2 py-2 text-right">{roomBase.toFixed(2)}</td>
-            <td className="border border-black px-2 py-2 text-right">2.50%</td>
-            <td className="border border-black px-2 py-2 text-right">2.50%</td>
+            <td className="border border-black px-2 py-2 text-right">{isGST ? '2.50%' : '0.00%'}</td>
+            <td className="border border-black px-2 py-2 text-right">{isGST ? '2.50%' : '0.00%'}</td>
             <td className="border border-black px-2 py-2 text-right">0.00%</td>
             <td className="border border-black px-2 py-2 text-right">0.00</td>
           </tr>
@@ -111,8 +112,8 @@ export const DetailedInvoice = ({ booking, hotel }: { booking: any, hotel: any }
                   <td className="border border-black px-2 py-2 text-right">{eBase.toFixed(2)}</td>
                   <td className="border border-black px-2 py-2 text-right">0.00</td>
                   <td className="border border-black px-2 py-2 text-right">{eBase.toFixed(2)}</td>
-                  <td className="border border-black px-2 py-2 text-right">2.50%</td>
-                  <td className="border border-black px-2 py-2 text-right">2.50%</td>
+                  <td className="border border-black px-2 py-2 text-right">{isGST ? '2.50%' : '0.00%'}</td>
+                  <td className="border border-black px-2 py-2 text-right">{isGST ? '2.50%' : '0.00%'}</td>
                   <td className="border border-black px-2 py-2 text-right">0.00%</td>
                   <td className="border border-black px-2 py-2 text-right">0.00</td>
                </tr>
@@ -220,7 +221,7 @@ export const DetailedInvoice = ({ booking, hotel }: { booking: any, hotel: any }
       </div>
 
       {/* Footer */}
-      <div className="mt-8 pt-6 border-t border-black flex justify-between items-end">
+      <div className="mt-4 pt-4 border-t border-black flex justify-between items-end">
          <div className="space-y-1 opacity-80">
             <p><span className="font-bold">This Folio is in</span>: Rs</p>
             <p><span className="font-bold">Reception (C/I)</span>: admin</p>

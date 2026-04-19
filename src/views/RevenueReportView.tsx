@@ -1,4 +1,5 @@
 import React from 'react';
+import { getBookingFinancials } from '../utils/financials';
 import { 
   TrendingUp, 
   DollarSign, 
@@ -11,7 +12,10 @@ import {
 } from 'lucide-react';
 
 export const RevenueReportView = ({ reportData, hotel }: any) => {
-  const { stats, filteredData, timeFilter, customRange } = reportData;
+  const stats = reportData?.stats || {};
+  const filteredData = reportData?.filteredData || [];
+  const timeFilter = reportData?.timeFilter || '7d';
+  const customRange = reportData?.customRange || { start: '', end: '' };
   const today = new Date().toLocaleDateString('en-GB', {
     day: '2-digit',
     month: 'long',
@@ -58,19 +62,19 @@ export const RevenueReportView = ({ reportData, hotel }: any) => {
       <div className="grid grid-cols-4 gap-4 mb-10">
         <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl">
           <p className="text-[8px] font-black uppercase opacity-60 mb-1">Gross Realized</p>
-          <p className="text-xl font-black">₹{stats.totals.revenue.toLocaleString()}</p>
+          <p className="text-xl font-black">₹{(stats?.totals?.revenue || 0).toLocaleString()}</p>
         </div>
         <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl">
           <p className="text-[8px] font-black uppercase opacity-60 mb-1">Net Cash</p>
-          <p className="text-xl font-black">₹{stats.totals.cash.toLocaleString()}</p>
+          <p className="text-xl font-black">₹{(stats?.totals?.cash || 0).toLocaleString()}</p>
         </div>
         <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl">
           <p className="text-[8px] font-black uppercase opacity-60 mb-1">Online/Digital</p>
-          <p className="text-xl font-black">₹{stats.totals.online.toLocaleString()}</p>
+          <p className="text-xl font-black">₹{(stats?.totals?.online || 0).toLocaleString()}</p>
         </div>
         <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl">
           <p className="text-[8px] font-black uppercase opacity-60 mb-1">Pending/Risk</p>
-          <p className="text-xl font-black text-red-600">₹{stats.totals.pending.toLocaleString()}</p>
+          <p className="text-xl font-black text-red-600">₹{(stats?.totals?.pending || 0).toLocaleString()}</p>
         </div>
       </div>
 
@@ -80,7 +84,7 @@ export const RevenueReportView = ({ reportData, hotel }: any) => {
           <h4 className="text-[10px] font-black uppercase tracking-widest border-b border-black/10 pb-2">Payment Methods</h4>
           <table className="w-full text-xs">
             <tbody>
-              {Object.entries(stats.methodBreakdown).map(([name, val]: any) => (
+               {Object.entries(stats?.methods || {}).map(([name, val]: any) => (
                 <tr key={name} className="border-b border-gray-50">
                   <td className="py-2 text-gray-600">{name}</td>
                   <td className="py-2 text-right font-bold">₹{val.toLocaleString()}</td>
@@ -93,7 +97,7 @@ export const RevenueReportView = ({ reportData, hotel }: any) => {
           <h4 className="text-[10px] font-black uppercase tracking-widest border-b border-black/10 pb-2">Source Contribution</h4>
           <table className="w-full text-xs">
             <tbody>
-              {Object.entries(stats.sourceBreakdown).map(([name, val]: any) => (
+               {Object.entries(stats?.sources || {}).map(([name, val]: any) => (
                 <tr key={name} className="border-b border-gray-50">
                   <td className="py-2 text-gray-600">{name}</td>
                   <td className="py-2 text-right font-bold">₹{val.toLocaleString()}</td>
@@ -106,18 +110,18 @@ export const RevenueReportView = ({ reportData, hotel }: any) => {
 
       {/* Insights Block */}
       <div className="p-6 bg-black text-white rounded-2xl mb-10 flex justify-between items-center">
-        <div className="flex items-center gap-4">
+         <div className="flex items-center gap-4">
           <div className="p-2 bg-white/10 rounded-lg">
             <Target size={20} />
           </div>
           <div>
             <p className="text-[8px] font-black uppercase opacity-60">Primary Revenue Driver</p>
-            <p className="text-sm font-bold uppercase tracking-widest">{stats.topSource}</p>
+            <p className="text-sm font-bold uppercase tracking-widest">{stats?.topSource || 'N/A'}</p>
           </div>
         </div>
         <div className="text-right">
           <p className="text-[8px] font-black uppercase opacity-60">Average Transaction</p>
-          <p className="text-xl font-black tracking-tighter">₹{Math.round(stats.avgBookingValue).toLocaleString()}</p>
+          <p className="text-xl font-black tracking-tighter">₹{Math.round(stats?.avgBookingValue || 0).toLocaleString()}</p>
         </div>
       </div>
 
@@ -137,15 +141,15 @@ export const RevenueReportView = ({ reportData, hotel }: any) => {
           </thead>
           <tbody>
             {filteredData.map((b: any, i: number) => {
-              const p = b.paymentDetails || {};
+              const fin = getBookingFinancials(b);
               return (
                 <tr key={i}>
                   <td className="p-2 border border-gray-200">{new Date(b.createdAt).toLocaleDateString()}</td>
                   <td className="p-2 border border-gray-200 font-bold">{b.guestDetails?.name}</td>
                   <td className="p-2 border border-gray-200 text-center">#{b.roomNumber}</td>
-                  <td className="p-2 border border-gray-200">{p.paymentMethod || 'UPI'}</td>
-                  <td className="p-2 border border-gray-200 text-right font-bold">₹{b.paidAmount?.toLocaleString()}</td>
-                  <td className="p-2 border border-gray-200 text-right">₹{b.balanceAmount?.toLocaleString()}</td>
+                  <td className="p-2 border border-gray-200 uppercase">{b.paymentMethod || 'UPI'}</td>
+                  <td className="p-2 border border-gray-200 text-right font-bold">₹{fin.paid.toLocaleString()}</td>
+                  <td className="p-2 border border-gray-200 text-right">₹{fin.balance.toLocaleString()}</td>
                 </tr>
               );
             })}

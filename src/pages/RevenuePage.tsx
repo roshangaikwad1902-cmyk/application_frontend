@@ -94,7 +94,7 @@ export const RevenuePage = ({ activeHotelId, onReportClick }: any) => {
     }
 
     const processSet = (data: any[]) => {
-      let totals = { rev: 0, cash: 0, online: 0, ota: 0, pending: 0, partial: 0, count: 0 };
+      let totals = { revenue: 0, cash: 0, online: 0, ota: 0, pending: 0, partial: 0, count: 0 };
       const sources: any = {};
       const methods: any = {};
       const daily: any = {};
@@ -104,25 +104,54 @@ export const RevenuePage = ({ activeHotelId, onReportClick }: any) => {
       data.forEach(b => {
         const fin = getBookingFinancials(b);
         
-        // Smart Method Resolve: Explicit field > Fallback logic
-        let method = b.paymentMethod;
-        if (!method) {
-          if (b.offlinePaid > 0) method = 'Cash';
-          else if (b.onlinePaid > 0) method = 'UPI';
-          else method = 'UPI'; // Default
-        }
+        // Breakdown payment by actual fields
+        const bCash = Number(b.offlinePaid || 0) + (fin.extrasPaid || 0);
+        const bOnline = Number(b.onlinePaid || 0);
         
-        totals.rev += fin.paid;
+        totals.revenue += fin.paid;
+        totals.cash += bCash;
+        totals.online += bOnline;
         totals.pending += fin.balance;
         totals.count++;
+
         if (fin.balance > 0) {
           totals.partial++;
-          pendingItems.push({ room: b.roomNumber, guest: b.guestDetails?.name, balance: fin.balance, total: fin.total, date: b.createdAt });
+          pendingItems.push({ 
+            room: b.roomNumber, 
+            guest: b.guestDetails?.name, 
+            balance: fin.balance, 
+            total: fin.total, 
+            date: b.createdAt 
+          });
         }
 
-        methods[method] = (methods[method] || 0) + fin.paid;
-        if (method === 'Cash') totals.cash += fin.paid;
-        else totals.online += fin.paid;
+        // Method Distribution for the Chart
+        if (bCash > 0) {
+          methods['Cash'] = (methods['Cash'] || 0) + bCash;
+        }
+        if (bOnline > 0) {
+          // If a specific online method is logged (UPI, Card, Bank), use it. Default to 'UPI'.
+          const onlineKey = (b.paymentMethod && b.paymentMethod !== 'Cash') ? b.paymentMethod : 'UPI';
+          methods[onlineKey] = (methods[onlineKey] || 0) + bOnline;
+        }
+
+        // Financial Integrity: Handle unattributed payments (Total Paid > Offline + Online)
+        const remainingPaid = Math.max(0, fin.paid - (bCash + bOnline));
+        
+        if (remainingPaid > 0) {
+          // Attribute remaining to the primary method or source
+          const method = b.paymentMethod;
+          
+          if (method === 'Cash' || (!method && b.bookingSource === 'walk_in')) {
+            totals.cash += remainingPaid;
+            methods['Cash'] = (methods['Cash'] || 0) + remainingPaid;
+          } else {
+            // Default to Online for OTA or explicit Digital methods
+            totals.online += remainingPaid;
+            const onlineKey = (method && method !== 'Cash') ? method : 'UPI';
+            methods[onlineKey] = (methods[onlineKey] || 0) + remainingPaid;
+          }
+        }
 
         const source = b.bookingSource === 'ota' ? (b.bookingPlatform || 'OTA') : 'Walk-in';
         sources[source] = (sources[source] || 0) + fin.paid;
@@ -135,7 +164,11 @@ export const RevenuePage = ({ activeHotelId, onReportClick }: any) => {
           roomRev[b.roomNumber] = (roomRev[b.roomNumber] || 0) + fin.paid;
         }
       });
-      return { totals, sources, methods, daily, roomRev, pendingItems };
+      const sortedSources = Object.entries(sources).sort((a: any, b: any) => b[1] - a[1]);
+      const topSource = sortedSources[0]?.[0] || 'Direct';
+      const avgBookingValue = data.length > 0 ? totals.revenue / data.length : 0;
+
+      return { totals, sources, methods, daily, roomRev, pendingItems, topSource, avgBookingValue };
     };
 
     const currentBookings = bookings.filter(b => {
@@ -190,7 +223,7 @@ export const RevenuePage = ({ activeHotelId, onReportClick }: any) => {
   const handleExport = () => {
     onReportClick({
       stats,
-      filteredData: analysis.recentActivity,
+      filteredData: analysis.tableData,
       timeFilter,
       customRange: { start: customStart, end: customEnd }
     });
@@ -214,7 +247,7 @@ export const RevenuePage = ({ activeHotelId, onReportClick }: any) => {
           <p className="text-[10px] font-black uppercase tracking-[0.4em] text-[#A1A1AA] mt-2">Enterprise Revenue Command Center</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-4 bg-[var(--lux-card)] p-2 rounded-2xl border border-white/5 shadow-2xl">
+        <div className="flex flex-wrap items-center gap-3 bg-[var(--lux-soft)] p-2 rounded-2xl border border-[var(--lux-border)] shadow-2xl backdrop-blur-xl">
           {[
             { id: '1d', label: 'Today' },
             { id: '7d', label: '7 Days' },
@@ -225,7 +258,7 @@ export const RevenuePage = ({ activeHotelId, onReportClick }: any) => {
             <button 
               key={f.id} 
               onClick={() => setTimeFilter(f.id)}
-              className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${timeFilter === f.id ? 'bg-[var(--lux-gold)] text-black' : 'text-[var(--lux-muted)] hover:text-white'}`}
+              className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${timeFilter === f.id ? 'bg-[var(--lux-gradient-gold)] text-black shadow-lg shadow-[var(--lux-gold)]/20' : 'text-[var(--lux-muted)] hover:text-white hover:bg-white/5'}`}
             >
               {f.label}
             </button>
@@ -249,7 +282,7 @@ export const RevenuePage = ({ activeHotelId, onReportClick }: any) => {
       {/* Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
         {[
-          { label: 'Total Revenue', value: stats.totals.rev, prev: analysis.prev.totals.rev, icon: DollarSign, color: 'text-emerald-500', glow: 'shadow-[0_0_20px_rgba(16,185,129,0.15)]' },
+          { label: 'Total Revenue', value: stats.totals.revenue, prev: analysis.prev.totals.revenue, icon: DollarSign, color: 'text-emerald-500', glow: 'shadow-[0_0_20px_rgba(16,185,129,0.15)]' },
           { label: 'Cash Flow', value: stats.totals.cash, prev: analysis.prev.totals.cash, icon: Wallet, color: 'text-amber-500', glow: 'shadow-[0_0_20px_rgba(245,158,11,0.15)]' },
           { label: 'Digital/Online', value: stats.totals.online, prev: analysis.prev.totals.online, icon: Zap, color: 'text-blue-500', glow: 'shadow-[0_0_20px_rgba(59,130,246,0.15)]' },
           { label: 'OTA Secured', value: stats.totals.ota, prev: analysis.prev.totals.ota, icon: Globe, color: 'text-purple-500', glow: 'shadow-[0_0_20px_rgba(168,85,247,0.15)]' },
@@ -262,7 +295,7 @@ export const RevenuePage = ({ activeHotelId, onReportClick }: any) => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: idx * 0.05 }}
             onClick={() => card.clickable && setShowPendingModal(true)}
-            className={`bg-[var(--lux-card)] p-8 rounded-[2.5rem] border border-white/5 space-y-5 shadow-2xl relative overflow-hidden group transition-all duration-500 ${card.clickable ? 'cursor-pointer hover:border-red-500/30' : 'hover:border-white/10'} ${card.glow || ''}`}
+            className={`bg-[var(--lux-gradient-surface)] p-8 rounded-[2.5rem] border border-white/5 shadow-[0_20px_50px_rgba(0,0,0,0.3)] relative overflow-hidden group transition-all duration-500 ${card.clickable ? 'cursor-pointer hover:border-red-500/30' : 'hover:border-white/10'} ${card.glow || ''}`}
           >
             <div className={`w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center ${card.color} group-hover:scale-110 transition-transform`}>
               <card.icon size={20} />
@@ -284,24 +317,34 @@ export const RevenuePage = ({ activeHotelId, onReportClick }: any) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Payment Split */}
-            <div className="bg-[var(--lux-card)] p-10 rounded-[3rem] border border-white/5 space-y-10">
+            <div className="bg-[var(--lux-gradient-surface)] p-10 rounded-[3rem] border border-white/10 space-y-10 shadow-2xl relative overflow-hidden">
+               <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[100px] rounded-full -translate-y-1/2 translate-x-1/2" />
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
                   <PieChart size={18} />
                 </div>
-                <h4 className="text-[12px] font-black uppercase tracking-widest">Payment Split</h4>
+                <h4 className="text-[12px] font-black uppercase tracking-widest text-[var(--lux-text)]">Payment Architecture</h4>
               </div>
               <div className="space-y-8">
                 {Object.entries(stats.methods).map(([name, val]: any) => {
-                  const percent = Math.round((val / (stats.totals.rev || 1)) * 100);
+                  const percent = Math.round((val / (stats.totals.revenue || 1)) * 100);
                   return (
                     <div key={name} className="space-y-3 font-display">
                       <div className="flex justify-between text-[11px] font-black uppercase tracking-tighter">
                         <span>{name}</span>
                         <span>₹{val.toLocaleString()} ({percent}%)</span>
                       </div>
-                      <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                        <motion.div initial={{ width: 0 }} animate={{ width: `${percent}%` }} className={`h-full rounded-full ${name === 'Cash' ? 'bg-emerald-500' : 'bg-blue-500'}`} />
+                      <div className="h-2.5 bg-black/20 rounded-full overflow-hidden border border-white/5">
+                        <motion.div 
+                          initial={{ width: 0 }} 
+                          animate={{ width: `${percent}%` }} 
+                          className={`h-full rounded-full shadow-[0_0_15px_rgba(255,255,255,0.05)] ${
+                             name === 'Cash' ? 'bg-emerald-500' : 
+                             name === 'UPI' ? 'bg-blue-500' : 
+                             name === 'Card' ? 'bg-amber-500' : 
+                             name === 'Bank Transfer' ? 'bg-purple-500' : 'bg-gray-500'
+                          }`} 
+                        />
                       </div>
                     </div>
                   );
@@ -310,24 +353,31 @@ export const RevenuePage = ({ activeHotelId, onReportClick }: any) => {
             </div>
 
             {/* Source Performance */}
-            <div className="bg-[var(--lux-card)] p-10 rounded-[3rem] border border-white/5 space-y-10">
+            <div className="bg-[var(--lux-gradient-surface)] p-10 rounded-[3rem] border border-white/10 shadow-2xl relative overflow-hidden">
+               <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/5 blur-[100px] rounded-full -translate-y-1/2 translate-x-1/2" />
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center">
                   <Target size={18} />
                 </div>
-                <h4 className="text-[12px] font-black uppercase tracking-widest">Source Performance</h4>
+                <h4 className="text-[12px] font-black uppercase tracking-widest text-[var(--lux-text)]">Source Intelligence</h4>
               </div>
               <div className="space-y-8">
                 {Object.entries(stats.sources).map(([name, val]: any) => {
-                  const percent = Math.round((val / (stats.totals.rev || 1)) * 100);
-                  const colors: any = { 'GoMMT': 'bg-red-500', 'Booking.com': 'bg-blue-600', 'Agoda': 'bg-purple-500', 'OYO': 'bg-red-600', 'Walk-in': 'bg-[var(--lux-gold)]' };
+                  const percent = Math.round((val / (stats.totals.revenue || 1)) * 100);
+                  const colors: any = { 
+                    'GoMMT': 'bg-gradient-to-r from-red-600 to-red-400', 
+                    'Booking.com': 'bg-gradient-to-r from-blue-700 to-blue-500', 
+                    'Agoda': 'bg-gradient-to-r from-purple-600 to-purple-400', 
+                    'OYO': 'bg-gradient-to-r from-red-700 to-red-500', 
+                    'Walk-in': 'bg-[var(--lux-gradient-gold)]' 
+                  };
                   return (
                     <div key={name} className="space-y-3">
                       <div className="flex justify-between text-[11px] font-extrabold uppercase tracking-tighter">
                         <span>{name}</span>
                         <span>{percent}%</span>
                       </div>
-                      <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                      <div className="h-2.5 bg-black/20 rounded-full overflow-hidden border border-white/5">
                         <motion.div initial={{ width: 0 }} animate={{ width: `${percent}%` }} className={`h-full rounded-full ${colors[name] || 'bg-gray-500'}`} />
                       </div>
                     </div>
@@ -339,7 +389,7 @@ export const RevenuePage = ({ activeHotelId, onReportClick }: any) => {
 
           {/* Transactions */}
           <div className="bg-[var(--lux-card)] border border-white/5 rounded-[3rem] overflow-hidden shadow-2xl">
-             <div className="p-8 border-b border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 bg-white/[0.02]">
+              <div className="p-8 border-b border-[var(--lux-border)] flex flex-col md:flex-row justify-between items-center gap-6 bg-[var(--lux-soft)]/20">
                 <div className="flex items-center gap-4">
                    <div className="w-12 h-12 bg-[var(--lux-gold)]/10 rounded-2xl flex items-center justify-center text-[var(--lux-gold)]">
                       <Clock size={20} />
@@ -350,17 +400,17 @@ export const RevenuePage = ({ activeHotelId, onReportClick }: any) => {
                    </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
-                   <div className="relative group flex-1 md:w-64">
-                      <Search size={14} className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--lux-muted)]" />
+                   <div className="relative group flex-1 md:w-80">
+                      <Search size={14} className="absolute left-6 top-1/2 -translate-y-1/2 text-[var(--lux-muted)] group-focus-within:text-[var(--lux-gold)] transition-colors" />
                       <input 
-                        type="text" placeholder="Search guests..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full bg-black/40 border border-white/5 rounded-2xl py-4 pl-14 pr-4 text-[10px] font-bold outline-none focus:border-[var(--lux-gold)]" 
+                        type="text" placeholder="Search guests or room records..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full lux-glass border border-white/10 rounded-2xl py-4 pl-16 pr-6 text-[11px] font-bold outline-none focus:border-[var(--lux-gold)] transition-all shadow-xl placeholder:text-white/20 text-white" 
                       />
                    </div>
-                   <div className="flex items-center gap-2 p-1.5 bg-black/20 rounded-2xl border border-white/5">
-                        <button onClick={handleExport} className="p-3 bg-white/5 text-white/40 hover:text-white rounded-xl"><Download size={16} /></button>
-                        <button onClick={() => toast.info("Excel Export Started...")} className="p-3 bg-emerald-500/10 text-emerald-500 rounded-xl"><CreditCard size={16} /></button>
-                    </div>
+                    <div className="flex items-center gap-2 p-1.5 bg-[var(--lux-soft)]/50 rounded-2xl border border-[var(--lux-border)]">
+                         <button onClick={handleExport} className="p-3 bg-white/5 text-[var(--lux-text)]/40 hover:text-[var(--lux-text)] rounded-xl"><Download size={16} /></button>
+                         <button onClick={() => toast.info("Excel Export Started...")} className="p-3 bg-emerald-500/10 text-emerald-500 rounded-xl"><CreditCard size={16} /></button>
+                     </div>
                 </div>
              </div>
              <div className="overflow-x-auto">
@@ -377,7 +427,6 @@ export const RevenuePage = ({ activeHotelId, onReportClick }: any) => {
                    <tbody className="divide-y divide-white/5">
                       {analysis.tableData.map((b: any) => {
                         const fin = getBookingFinancials(b);
-                        const p = b.paymentDetails || {};
                         return (
                           <tr key={b._id} className="group hover:bg-white/[0.01]">
                              <td className="p-8">
@@ -397,22 +446,35 @@ export const RevenuePage = ({ activeHotelId, onReportClick }: any) => {
                                 <p className="text-[8px] opacity-30 mt-1">OF ₹{fin.total.toLocaleString()}</p>
                              </td>
                              <td className="p-8">
-                                <div className="flex items-center gap-2">
-                                   {/* Method Display with logic */}
-                                   {(() => {
-                                      let method = b.paymentMethod;
-                                      if (!method) {
-                                         if (b.offlinePaid > 0) method = 'Cash';
-                                         else method = 'UPI';
-                                      }
-                                      return (
-                                         <>
-                                            <span className={`w-2 h-2 rounded-full ${method === 'Cash' ? 'bg-emerald-500' : 'bg-blue-500'}`}></span>
-                                            <span className="text-[10px] font-black uppercase">{method}</span>
-                                         </>
-                                      );
-                                   })()}
-                                </div>
+                                 <div className="flex items-center gap-2">
+                                    {/* Refined Method Display: Accounts for the "attribution gap" fallback */}
+                                    {(() => {
+                                       const fin = getBookingFinancials(b);
+                                       const bCash = Number(b.offlinePaid || 0) + (fin.extrasPaid || 0);
+                                       const bOnline = Number(b.onlinePaid || 0);
+                                       const gap = Math.max(0, fin.paid - (bCash + bOnline));
+
+                                       const hasOffline = bCash > 0 || (gap > 0 && (b.paymentMethod === 'Cash' || (!b.paymentMethod && b.bookingSource === 'walk_in')));
+                                       const hasOnline = bOnline > 0 || (gap > 0 && !hasOffline);
+                                       
+                                       if (hasOffline && hasOnline) {
+                                          return (
+                                             <>
+                                                <span className="w-2 h-2 rounded-full bg-gradient-to-r from-emerald-500 to-blue-500"></span>
+                                                <span className="text-[10px] font-black uppercase">Split</span>
+                                             </>
+                                          );
+                                       }
+                                       
+                                       const method = b.paymentMethod || (hasOffline ? 'Cash' : 'UPI');
+                                       return (
+                                          <>
+                                             <span className={`w-2 h-2 rounded-full ${hasOffline ? 'bg-emerald-500' : 'bg-blue-500'}`}></span>
+                                             <span className="text-[10px] font-black uppercase">{method}</span>
+                                          </>
+                                       );
+                                    })()}
+                                 </div>
                              </td>
                              <td className="p-8">
                                 <span className={`px-4 py-2 rounded-full text-[8px] font-black uppercase ${fin.paidPercent === 100 ? 'bg-green-500/10 text-green-500' : 'bg-amber-500/10 text-amber-500'}`}>

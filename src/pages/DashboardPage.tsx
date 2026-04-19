@@ -60,6 +60,41 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
   const [cashPayment, setCashPayment] = useState<string>('');
   const [upiPayment, setUpiPayment] = useState<string>('');
 
+  // --- NEW: Smart Check-In Logic ---
+  const [checkinDate, setCheckinDate] = useState<string>(new Date().toLocaleDateString('en-CA'));
+  const [checkoutDate, setCheckoutDate] = useState<string>(new Date(Date.now() + 86400000).toLocaleDateString('en-CA'));
+  const [invoiceType, setInvoiceType] = useState<'gst' | 'non-gst'>('non-gst');
+
+  // Date Logic
+  const adjustDate = (type: 'checkin' | 'checkout', amount: number) => {
+    if (type === 'checkin') {
+      const d = new Date(checkinDate);
+      d.setDate(d.getDate() + amount);
+      const newCi = d.toLocaleDateString('en-CA');
+      setCheckinDate(newCi);
+      
+      // Auto-shift checkout to maintain nights
+      const currentNights = Math.max(1, Math.ceil((new Date(checkoutDate).getTime() - new Date(checkinDate).getTime()) / (1000 * 60 * 60 * 24)));
+      const nextCo = new Date(d);
+      nextCo.setDate(nextCo.getDate() + currentNights);
+      setCheckoutDate(nextCo.toLocaleDateString('en-CA'));
+    } else {
+      const d = new Date(checkoutDate);
+      d.setDate(d.getDate() + amount);
+      const ci = new Date(checkinDate);
+      if (d <= ci) return; // Min 1 night
+      setCheckoutDate(d.toLocaleDateString('en-CA'));
+    }
+  };
+
+  const nightsCount = useMemo(() => {
+    const start = new Date(checkinDate);
+    const end = new Date(checkoutDate);
+    const diff = end.getTime() - start.getTime();
+    return Math.max(1, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  }, [checkinDate, checkoutDate]);
+
+
   // Added: OTA state for Integrated Check-In
   const [ciSource, setCiSource] = useState('walk_in');
   const [ciPlatform, setCiPlatform] = useState('');
@@ -91,6 +126,29 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
       setGuestEmail('');
     }
   }, [selectedRoom?.number, selectedRoom?.booking]);
+
+  // --- NEW: Smart Auto-fill for returning guests ---
+  useEffect(() => {
+    if (guestMobile.length === 10) {
+       fetch(`${API_BASE_URL}/api/content/guests/search?query=${guestMobile}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.length > 0) {
+            const guest = data[0];
+            setGuestName(guest.name || '');
+            setGuestEmail(guest.email || '');
+            setCiSource(guest.bookingSource || 'walk_in');
+            setCiPlatform(guest.bookingPlatform || '');
+            setCiOtaPayType(guest.otaPaymentType || 'pay_at_hotel');
+            toast.info(`Returning Guest Identified: ${guest.name.toUpperCase()}`, {
+              description: "Manifest records have been automatically synchronized."
+            });
+          }
+        })
+        .catch(err => console.error("Smart lookup error:", err));
+    }
+  }, [guestMobile]);
+
 
   const hotels = useMemo(() => allHotels.filter((h: any) => h.id && h.rooms?.length > 0), [allHotels]);
 
@@ -220,6 +278,10 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
     return rooms.find((r: any) => r.number === selectedRoom.number) || selectedRoom;
   }, [rooms, selectedRoom]);
 
+  const subtotal = useMemo(() => (Number(liveSelectedRoom?.price) || 0) * nightsCount, [liveSelectedRoom?.price, nightsCount]);
+  const gstValue = useMemo(() => invoiceType === 'gst' ? Math.round(subtotal * 0.05 * 100) / 100 : 0, [subtotal, invoiceType]);
+  const finalTotal = subtotal + gstValue;
+
   const groupedRooms = useMemo(() => {
     const groups: Record<string, any[]> = {};
     filteredRooms.forEach(r => {
@@ -244,7 +306,7 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
       const interval = setInterval(update, 60000);
       return () => clearInterval(interval);
     }, [date]);
-    return <span>{time}</span>;
+    return <span className="text-black">{time}</span>;
   };
 
   const handleUpdateRoomStatus = async (roomNumber: string, status: string) => {
@@ -387,12 +449,12 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
   };
 
   // Live Ledger Calculations for Integrated Check-In
-  const checkInTotal = Number(liveSelectedRoom?.price) || 0;
+  const checkInTotal = finalTotal;
   const isOtaPaidOnline = ciSource === 'ota' && ciOtaPayType === 'paid_online';
   const checkInOffline = Number(offlineAmount) || 0;
   const checkInOnline = Number(onlineAmount) || 0;
   const totalPaidCheckIn = isOtaPaidOnline ? checkInTotal : (checkInOffline + checkInOnline);
-  const balanceCheckIn = checkInTotal - totalPaidCheckIn;
+  const balanceCheckIn = finalTotal - totalPaidCheckIn;
 
   useEffect(() => {
     if (ciSource === 'ota' && ciOtaPayType === 'paid_online') {
@@ -405,16 +467,15 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
     if (!liveSelectedRoom || !guestName || !guestMobile) return toast.error("Complete Identity Details");
     
     // Financial Integrity
-    if (checkInOffline < 0 || checkInOnline <0) return toast.error("NEGATIVE PAYMENT REJECTED");
-    if (totalPaidCheckIn > checkInTotal) return toast.error(`EXCEEDS TOTAL: Max ₹${checkInTotal}`);
+    if (checkInOffline < 0 || checkInOnline < 0) return toast.error("NEGATIVE PAYMENT REJECTED");
+    if (totalPaidCheckIn > finalTotal) return toast.error(`EXCEEDS TOTAL: Max ₹${finalTotal}`);
 
     setIsSubmitting(true);
     const tid = toast.loading(`Enrolling ${guestName} to Room ${liveSelectedRoom.number}...`);
     
     try {
-      const checkin = new Date();
-      const checkout = new Date();
-      checkout.setDate(checkout.getDate() + 1); // Default to 1 night
+      const checkin = new Date(checkinDate);
+      const checkout = new Date(checkoutDate);
 
       const bookingData = {
         hotel_id: activeHotelId,
@@ -423,7 +484,7 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
         checkout: checkout.toISOString(),
         roomNumber: liveSelectedRoom.number,
         guests: 1, // Fix: Schema requirement
-        totalAmount: checkInTotal,
+        totalAmount: finalTotal,
         paidAmount: totalPaidCheckIn,
         offlinePaid: checkInOffline,
         onlinePaid: checkInOnline,
@@ -435,7 +496,9 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
         bookingSource: ciSource,
         bookingPlatform: ciPlatform,
         otaPaymentType: ciOtaPayType,
-        paymentStatus: ciSource === 'ota' && ciOtaPayType === 'paid_online' ? 'paid' : (totalPaidCheckIn >= checkInTotal ? 'paid' : 'partial')
+        invoiceType: invoiceType,
+        gstAmount: gstValue,
+        paymentStatus: ciSource === 'ota' && ciOtaPayType === 'paid_online' ? 'paid' : (totalPaidCheckIn >= finalTotal ? 'paid' : 'partial')
       };
 
       const res = await fetch(`${API_BASE_URL}/api/content/bookings/pay-at-hotel`, {
@@ -486,7 +549,7 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
                       key={f}
                       type="button"
                       onClick={() => setStatusFilter(f as any)}
-                      className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex-shrink-0 ${statusFilter === f ? 'bg-[var(--lux-gold)] text-black shadow-lg shadow-[var(--lux-gold)]/20' : 'text-[var(--lux-muted)] hover:text-white hover:bg-white/5'}`}
+                      className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-500 flex-shrink-0 ${statusFilter === f ? 'bg-[var(--lux-gradient-gold)] text-black shadow-[0_8px_20px_rgba(212,175,55,0.25)] scale-105' : 'text-[var(--lux-muted)] hover:bg-white/5 hover:text-white'}`}
                     >
                       {f}
                     </button>
@@ -495,23 +558,23 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
                
                <div className="flex flex-col sm:flex-row items-center gap-6 w-full xl:w-auto">
                   <div className="relative group flex-1 sm:w-96">
-                     <Search size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--lux-muted)] group-focus-within:text-[var(--lux-gold)] transition-colors" />
+                     <Search size={16} className="absolute left-6 top-1/2 -translate-y-1/2 text-[var(--lux-muted)] group-focus-within:text-[var(--lux-gold)] transition-all duration-300 z-10" />
                      <input 
-                       type="text" placeholder="Search registry..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                       className="w-full h-12 bg-[var(--lux-card)] border border-white/5 rounded-2xl py-3.5 pl-14 pr-4 text-[12px] font-bold outline-none focus:border-[var(--lux-gold)] transition-all shadow-inner placeholder:text-white/10" 
+                       type="text" placeholder="Search registry or guests..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                       className="w-full h-14 lux-glass border border-white/10 rounded-[1.25rem] py-4 pl-16 pr-6 text-[13px] font-bold outline-none focus:border-[var(--lux-gold)] focus:ring-4 focus:ring-[var(--lux-gold)]/10 transition-all shadow-2xl placeholder:text-white/20 text-white" 
                      />
                   </div>
 
-                  <div className="flex items-center gap-1.5 p-1.5 bg-[var(--lux-card)] rounded-2xl border border-white/5 shadow-inner">
+                  <div className="flex items-center gap-1.5 p-1.5 bg-[var(--lux-card)] rounded-2xl border border-[var(--lux-border)] shadow-inner">
                       <button 
                         onClick={() => setViewMode('grid')}
-                        className={`p-3 rounded-xl transition-all ${viewMode === 'grid' ? 'bg-white/10 text-white' : 'text-white/20 hover:text-white'}`}
+                        className={`p-3 rounded-xl transition-all ${viewMode === 'grid' ? 'bg-[var(--lux-soft)] text-[var(--lux-gold)]' : 'text-[var(--lux-muted)] hover:text-[var(--lux-text)]'}`}
                       >
                         <Grid size={18} />
                       </button>
                       <button 
                         onClick={() => setViewMode('compact')}
-                        className={`p-3 rounded-xl transition-all ${viewMode === 'compact' ? 'bg-white/10 text-white' : 'text-white/20 hover:text-white'}`}
+                        className={`p-3 rounded-xl transition-all ${viewMode === 'compact' ? 'bg-[var(--lux-soft)] text-[var(--lux-gold)]' : 'text-[var(--lux-muted)] hover:text-[var(--lux-text)]'}`}
                       >
                         <LayoutGrid size={18} />
                       </button>
@@ -547,8 +610,8 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
 
                             {/* Header row */}
                             <div className="flex flex-col">
-                               <span className={`text-[9px] font-black uppercase tracking-widest text-[#A1A1AA] leading-none mb-1 ${isActive ? 'text-black' : ''}`}>UNIT REGISTRY</span>
-                               <span className={`text-[13px] font-bold leading-none ${isActive ? 'text-black' : ''}`}>#{room.number}</span>
+                               <span className={`text-[9px] font-black uppercase tracking-widest text-[var(--lux-muted)] leading-none mb-1 ${isActive ? 'text-black' : ''}`}>UNIT REGISTRY</span>
+                               <span className={`text-[13px] font-bold leading-none ${isActive ? 'text-black' : 'text-[var(--lux-text)]'}`}>#{room.number}</span>
                             </div>
 
                             {/* Badge row for OTA */}
@@ -563,16 +626,16 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
 
                             {/* Body row: Large Number & Type */}
                             <div className="flex flex-col items-center justify-center -translate-y-2">
-                               <h4 className={`text-[46px] font-display font-black leading-none tracking-tighter ${isActive ? 'text-black' : ''}`}>{room.number}</h4>
-                               <p className={`text-[11px] font-black uppercase tracking-[0.2em] text-[#A1A1AA] mt-1 whitespace-nowrap overflow-hidden text-center max-w-full truncate ${isActive ? 'text-black/60' : ''}`}>{room.type}</p>
+                               <h4 className={`text-[46px] font-display font-black leading-none tracking-tighter ${isActive ? 'text-black' : 'text-zinc-900'}`}>{room.number}</h4>
+                               <p className={`text-[11px] font-black uppercase tracking-[0.2em] text-[var(--lux-muted)] mt-1 whitespace-nowrap overflow-hidden text-center max-w-full truncate ${isActive ? 'text-black/60' : ''}`}>{room.type}</p>
                             </div>
 
                             {/* Footer row: Guest Info */}
-                            <div className={`pt-3 border-t flex flex-col gap-0.5 ${isActive ? 'border-black/10' : 'border-black/5'}`}>
+                            <div className={`pt-3 border-t flex flex-col gap-0.5 ${isActive ? 'border-black/10' : 'border-[var(--lux-border)]'}`}>
                                {room.booking ? (
                                  <div className="flex justify-between items-center gap-2 overflow-hidden">
                                     <div className="flex flex-col min-w-0">
-                                       <span className={`text-[13px] font-bold truncate ${isActive ? 'text-black' : ''}`} title={room.booking.guestDetails?.name}>
+                                       <span className={`text-[13px] font-bold truncate ${isActive ? 'text-black' : 'text-[var(--lux-text)]'}`} title={room.booking.guestDetails?.name}>
                                           {room.booking.guestDetails?.name || 'In-House Client'}
                                        </span>
                                        <span className={`text-[9px] font-black uppercase tracking-widest text-[#6B7280] ${isActive ? 'text-black/40' : ''}`}>
@@ -580,7 +643,7 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
                                        </span>
                                     </div>
                                     <div className="text-right flex flex-col items-end">
-                                       <span className={`text-[10px] font-black ${isActive ? 'text-black/60' : 'text-[var(--lux-gold)]'}`}>
+                                       <span className={`text-[10px] font-black ${isActive ? 'text-black/60' : 'text-black'}`}>
                                           <TimeAgo date={room.booking.checkin} />
                                        </span>
                                        <span className={`text-[8px] font-bold opacity-20 italic ${isActive ? 'text-black/20' : ''}`}>
@@ -638,7 +701,7 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={() => setSelectedRoom(room)}
-                            className={`grid-room-box group cursor-pointer ${isActive ? 'ring-2 ring-[var(--lux-gold)] ring-offset-2 ring-offset-black shadow-2xl scale-105 z-10' : ''} ${statusStyles[room.status] || 'bg-zinc-900'} relative overflow-hidden`}
+                            className={`grid-room-box group cursor-pointer ${isActive ? 'ring-2 ring-[var(--lux-gold)] ring-offset-4 ring-offset-black shadow-[0_0_40px_rgba(212,175,55,0.15)] scale-105 z-10' : ''} ${statusStyles[room.status] || 'bg-zinc-900'} relative overflow-hidden bg-[var(--lux-gradient-surface)] border border-white/5`}
                           >
                              {/* Small indicator badges for compact view */}
                              {room.booking?.bookingSource === 'ota' && (
@@ -651,7 +714,7 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
                             <div className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${room.status === 'Available' ? 'bg-green-500' : 'bg-red-500'} shadow-[0_0_8px_currentColor]`} />
                             
                             <div className="flex flex-col items-center justify-center text-center space-y-1">
-                              <span className="text-3xl font-display font-black leading-none">{room.number}</span>
+                              <span className={`text-3xl font-display font-black leading-none ${room.status === 'Available' ? 'text-zinc-900' : ''}`}>{room.number}</span>
                               <span className="text-[10px] font-black uppercase tracking-widest opacity-60 truncate w-full px-1" title={room.booking?.guestDetails?.name}>
                                 {room.status === 'Booked' && room.booking?.guestDetails?.name 
                                   ? room.booking.guestDetails.name 
@@ -1171,15 +1234,74 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
                                      <span className="opacity-40">Base Price:</span>
                                      <span>₹{liveSelectedRoom.price}</span>
                                   </div>
+                                  
+                                  {/* Date Controls */}
+                                  <div className="pt-2 border-t border-white/5 space-y-3">
+                                     <div className="flex justify-between items-center">
+                                        <div className="space-y-0.5">
+                                           <span className="text-[8px] font-black uppercase tracking-widest opacity-40">Check-in</span>
+                                           <p className="text-[10px] font-bold">{new Date(checkinDate).toDateString()}</p>
+                                        </div>
+                                        <div className="flex gap-1">
+                                           <button type="button" onClick={() => adjustDate('checkin', -1)} className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center hover:bg-white/10 text-[10px] font-bold">-1</button>
+                                           <button type="button" onClick={() => adjustDate('checkin', 1)} className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center hover:bg-white/10 text-[10px] font-bold">+1</button>
+                                        </div>
+                                     </div>
+                                     <div className="flex justify-between items-center">
+                                        <div className="space-y-0.5">
+                                           <span className="text-[8px] font-black uppercase tracking-widest opacity-40">Check-out</span>
+                                           <p className="text-[10px] font-bold">{new Date(checkoutDate).toDateString()}</p>
+                                        </div>
+                                        <div className="flex gap-1">
+                                           <button type="button" onClick={() => adjustDate('checkout', -1)} className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center hover:bg-white/10 text-[10px] font-bold">-1</button>
+                                           <button type="button" onClick={() => adjustDate('checkout', 1)} className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center hover:bg-white/10 text-[10px] font-bold">+1</button>
+                                        </div>
+                                     </div>
+                                  </div>
+
                                   <div className="flex justify-between items-center text-sm font-bold">
                                      <span className="opacity-40">Nights:</span>
-                                     <span>1</span>
+                                     <span className="text-[var(--lux-gold)] font-black">{nightsCount}N</span>
                                   </div>
+                                  
                                   <div className="h-px bg-white/5 my-2"></div>
-                                  <div className="flex justify-between items-end pt-4">
-                                     <div>
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--lux-gold)] leading-none">Gross Total</p>
-                                        <h2 className="text-4xl font-display font-black tracking-tighter mt-1">₹{liveSelectedRoom.price}</h2>
+                                  
+                                  {/* Invoice Selector */}
+                                  <div className="space-y-2">
+                                     <div className="flex p-1 bg-black/40 rounded-xl border border-white/10">
+                                        <button 
+                                          type="button" onClick={() => setInvoiceType('non-gst')}
+                                          className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${invoiceType === 'non-gst' ? 'bg-[#D4AF37] text-black shadow-lg' : 'text-white/40 hover:text-white'}`}
+                                        >
+                                           Non-GST
+                                        </button>
+                                        <button 
+                                          type="button" onClick={() => setInvoiceType('gst')}
+                                          className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${invoiceType === 'gst' ? 'bg-[#D4AF37] text-black shadow-lg' : 'text-white/40 hover:text-white'}`}
+                                        >
+                                           GST (5%)
+                                        </button>
+                                     </div>
+                                  </div>
+
+                                  <div className="flex flex-col gap-1 pt-2">
+                                     {invoiceType === 'gst' && (
+                                       <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-1">
+                                          <div className="flex justify-between items-center text-[10px] font-bold opacity-60">
+                                             <span>Subtotal:</span>
+                                             <span>₹{subtotal}</span>
+                                          </div>
+                                          <div className="flex justify-between items-center text-[10px] font-bold text-[var(--lux-gold)]">
+                                             <span>GST (5%):</span>
+                                             <span>₹{gstValue}</span>
+                                          </div>
+                                       </motion.div>
+                                     )}
+                                     <div className="flex justify-between items-end">
+                                        <div>
+                                           <p className="text-[10px] font-black uppercase tracking-widest text-[var(--lux-gold)] leading-none">Gross Total</p>
+                                           <h2 className="text-4xl font-display font-black tracking-tighter mt-1">₹{finalTotal}</h2>
+                                        </div>
                                      </div>
                                   </div>
                               </div>
@@ -1193,20 +1315,20 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
                                         <p className="text-[9px] font-black uppercase text-[var(--lux-muted)] tracking-widest">Total Paid</p>
                                         <h4 className="text-3xl font-display font-bold text-green-400 italic">₹{totalPaidCheckIn}</h4>
                                      </div>
-                                     <div className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest ${balanceCheckIn <= 0 ? 'bg-green-500/20 text-green-400 border border-green-500/30' : balanceCheckIn === Number(liveSelectedRoom.price) ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'}`}>
-                                        {balanceCheckIn <= 0 ? 'PAID' : balanceCheckIn === Number(liveSelectedRoom.price) ? 'UNPAID' : 'PARTIAL'}
+                                     <div className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest ${balanceCheckIn <= 0 ? 'bg-green-500/20 text-green-400 border border-green-500/30' : balanceCheckIn === finalTotal ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'}`}>
+                                        {balanceCheckIn <= 0 ? 'PAID' : balanceCheckIn === finalTotal ? 'UNPAID' : 'PARTIAL'}
                                      </div>
                                   </div>
 
                                   <div className="space-y-3">
                                      <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-[var(--lux-muted)]">
                                         <span>Settlement Progress</span>
-                                        <span className="text-[var(--lux-text)] font-bold">{Math.min(100, Math.round((totalPaidCheckIn / (Number(liveSelectedRoom.price) || 1)) * 100))}%</span>
+                                        <span className="text-[var(--lux-text)] font-bold">{Math.min(100, Math.round((totalPaidCheckIn / (finalTotal || 1)) * 100))}%</span>
                                      </div>
                                      <div className="w-full h-2 bg-black/40 rounded-full overflow-hidden border border-white/5">
                                         <motion.div 
                                            initial={{ width: 0 }}
-                                           animate={{ width: `${Math.min(100, (totalPaidCheckIn / (Number(liveSelectedRoom.price) || 1)) * 100)}%` }}
+                                           animate={{ width: `${Math.min(100, (totalPaidCheckIn / (finalTotal || 1)) * 100)}%` }}
                                            className="h-full bg-gradient-to-r from-[#D4AF37] to-yellow-400 shadow-[0_0_10px_rgba(212,175,55,0.3)] transition-all duration-1000" 
                                         />
                                      </div>

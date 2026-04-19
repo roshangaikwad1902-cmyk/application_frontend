@@ -11,18 +11,17 @@ export const HotelSelectionPage = ({ onSelect }: { onSelect: (id: string, name: 
   if (isLoading) return <div className="h-screen bg-black flex items-center justify-center text-[var(--lux-gold)] animate-pulse font-display text-4xl uppercase tracking-[0.3em]">Bhagat Enterprise</div>;
 
   return (
-    <div className="min-h-screen bg-black text-white px-6 py-12 md:py-20 flex flex-col items-center">
+    <div className="min-h-screen bg-black text-white px-6 pt-0 pb-20 flex flex-col items-center">
       <motion.div 
         initial={{ opacity: 0, y: 15 }} 
         animate={{ opacity: 1, y: 0 }} 
-        className="text-center mb-10 flex flex-col items-center"
+        className="text-center mb-2 mt-0 flex flex-col items-center"
       >
          <img 
             src="/logo.jpg" 
             alt="Bhagat Group" 
-            className="w-auto h-[120px] md:h-[150px] mix-blend-screen opacity-90 brightness-110 contrast-100 mb-2" 
+            className="w-auto h-[200px] md:h-[280px] mix-blend-screen opacity-90 brightness-110 contrast-100 mb-4" 
          />
-         <p className="text-[9px] font-black uppercase tracking-[0.4em] text-[var(--lux-gold)] opacity-40">Hospitality Management Network</p>
       </motion.div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full max-w-6xl">

@@ -18,6 +18,7 @@
     --lux-gold-light: #E6C15A;
     --lux-gold-bg: rgba(212, 175, 55, 0.12);
     --lux-glass: rgba(18, 18, 20, 0.7);
+    --lux-input-bg: #0F0F10;
 
     /* Ultra Vibrant Status Palette */
     --lux-available-bg: #FFFFFF;
@@ -48,6 +49,11 @@
 
     --font-display: 'Outfit', sans-serif;
     --font-body: 'Inter', sans-serif;
+
+    /* Premium Gradients */
+    --lux-gradient-gold: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%);
+    --lux-gradient-dark: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%);
+    --lux-gradient-surface: linear-gradient(145deg, #1A1A1C 0%, #121214 100%);
   }
 
   [data-theme="light"] {
@@ -59,6 +65,10 @@
     --lux-border: #E5E7EB;
     --lux-gold: #C8A96A;
     --lux-gold-light: #E6D3A3;
+    --lux-input-bg: #FFFFFF;
+    
+    --lux-gradient-gold: linear-gradient(135deg, #C8A96A 0%, #B5935A 100%);
+    --lux-gradient-surface: linear-gradient(145deg, #FFFFFF 0%, #F9F7F2 100%);
 
     --lux-available-bg: #FFFFFF;
     --lux-available-border: #E5E7EB;
@@ -96,6 +106,22 @@
     background: var(--lux-booked-bg) !important;
     border: 1.5px solid var(--lux-booked-border) !important;
     color: var(--lux-booked-text) !important;
+    box-shadow: 0 4px 15px rgba(34, 197, 94, 0.2);
+  }
+
+  /* Glassmorphism Utilities */
+  .lux-glass {
+    background: rgba(18, 18, 20, 0.6) !important;
+    backdrop-filter: blur(12px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  }
+
+  .lux-glass-bright {
+    background: rgba(255, 255, 255, 0.03) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
   }
   .room-card-cleaning {
     background: var(--lux-cleaning-bg) !important;
@@ -271,7 +297,7 @@
   }
   
   .premium-input {
-    @apply w-full h-12 bg-[#0F0F10] border border-[var(--lux-border)] rounded-xl px-4 text-sm font-medium text-[var(--lux-text)] transition-all duration-300 outline-none placeholder:text-[var(--lux-text-muted)];
+    @apply w-full h-12 bg-[var(--lux-input-bg)] border border-[var(--lux-border)] rounded-xl px-4 text-sm font-medium text-[var(--lux-text)] transition-all duration-300 outline-none placeholder:text-[var(--lux-text-muted)];
   }
   
   .premium-input:focus {

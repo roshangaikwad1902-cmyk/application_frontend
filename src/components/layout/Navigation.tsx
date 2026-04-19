@@ -123,10 +123,10 @@ export const Sidebar = ({ theme, isOpen, setIsOpen, onLogout }: any) => {
     <>
       <AnimatePresence>
         {isOpen && (
-           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsOpen(false)} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden" />
+           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsOpen(false)} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] lg:hidden" />
         )}
       </AnimatePresence>
-      <aside className={`fixed top-0 left-0 bottom-0 w-[280px] bg-[var(--lux-card)] border-r border-[var(--lux-border)] z-50 transition-transform duration-500 lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed top-0 left-0 bottom-0 w-[280px] bg-[var(--lux-card)] border-r border-[var(--lux-border)] z-[70] transition-transform duration-500 lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
          <div className="px-6 pt-0 pb-2 border-b border-[var(--lux-border)] flex justify-center overflow-hidden">
             <img 
                src="/logo.jpg" 
@@ -147,7 +147,7 @@ export const Sidebar = ({ theme, isOpen, setIsOpen, onLogout }: any) => {
               </Link>
             ))}
          </nav>
-         <div className="absolute bottom-6 left-6 right-6 p-6 bg-white/5 rounded-3xl border border-white/5">
+         <div className="absolute bottom-10 left-6 right-6 p-6 bg-white/5 rounded-3xl border border-white/5">
             <button 
               type="button"
               onClick={onLogout}

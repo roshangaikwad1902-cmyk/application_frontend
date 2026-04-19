@@ -7,18 +7,18 @@ export const BookingSlip = ({ booking, hotel }: { booking: any, hotel: any }) =>
   const checkout = new Date(booking.checkout).toLocaleDateString();
 
   return (
-    <div className="a4-page p-12 bg-white text-black font-sans shadow-none border-none">
-      <div className="flex flex-col items-center text-center mb-10 border-b-2 border-dashed border-gray-300 pb-8">
+    <div className="a4-page p-10 bg-white text-black font-sans shadow-none border-none">
+      <div className="flex flex-col items-center text-center mb-6 border-b-2 border-dashed border-gray-300 pb-4">
         <img 
           src="/logo.jpg" 
           alt="Bhagat Group" 
-          className="h-24 w-auto mix-blend-multiply invert-[1] brightness-90 contrast-125 mb-4" 
+          className="h-40 w-auto mix-blend-multiply invert-[1] brightness-90 contrast-125 mb-4" 
         />
         <h1 className="text-xl font-black uppercase tracking-widest mb-1">{hotel?.name}</h1>
         <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.3em]">Official Reservation Manifest</p>
       </div>
 
-      <div className="flex justify-between items-start mb-12">
+      <div className="flex justify-between items-start mb-8">
         <div>
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Booking Reference</p>
           <h2 className="text-xl font-bold">#{booking._id?.slice(-8).toUpperCase() || 'FUTURE-RES'}</h2>
@@ -31,7 +31,7 @@ export const BookingSlip = ({ booking, hotel }: { booking: any, hotel: any }) =>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-12 mb-12">
+      <div className="grid grid-cols-2 gap-12 mb-8">
         <div className="space-y-6">
           <div>
             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Guest Detail</p>
@@ -65,9 +65,9 @@ export const BookingSlip = ({ booking, hotel }: { booking: any, hotel: any }) =>
         </div>
       </div>
 
-      <div className="border-t-2 border-gray-100 pt-8 mt-8">
+      <div className="border-t-2 border-gray-100 pt-4 mt-4">
         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Financial Summary</p>
-        <div className="space-y-3 bg-gray-50 p-8 rounded-2xl">
+        <div className="space-y-3 bg-gray-50 p-6 rounded-2xl">
           <div className="flex justify-between items-center text-sm">
             <span className="text-gray-500 font-bold uppercase tracking-widest text-[10px]">Total Tariff</span>
             <span className="font-bold">₹{booking.totalAmount}</span>
@@ -83,7 +83,7 @@ export const BookingSlip = ({ booking, hotel }: { booking: any, hotel: any }) =>
         </div>
       </div>
 
-      <div className="mt-20 pt-10 border-t-2 border-dashed border-gray-200 text-center">
+      <div className="mt-12 pt-6 border-t-2 border-dashed border-gray-200 text-center">
         <p className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.3em] mb-4">Terms & Conditions Apply • Issued via Bhagat Enterprise Console</p>
         <div className="inline-block px-10 py-3 border border-gray-200 rounded-xl text-[8px] font-black uppercase text-gray-400">
           This is a digital manifest and does not require a physical signature

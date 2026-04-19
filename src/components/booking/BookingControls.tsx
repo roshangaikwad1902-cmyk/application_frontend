@@ -10,7 +10,6 @@ import {
   ChevronRight, 
   Phone, 
   User, 
-  Smartphone, 
   TrendingUp, 
   Plus, 
   ShieldCheck, 
@@ -273,27 +272,25 @@ export const BookingDetailsDrawer = ({ booking, isOpen, onClose, onUpdate, onEdi
                       </button>
                    </div>
                 </div>
-              </div>
-
-              {/* Quick Actions Row */}
-              <div className="grid grid-cols-3 gap-3">
-                 <button type="button" className="flex flex-col items-center gap-2 p-3 bg-[var(--lux-card)] border border-[var(--lux-border)] rounded-2xl hover:border-[var(--lux-gold)] transition-all group">
-                    <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-all">
-                       <Smartphone size={16} />
+              </div>              {/* Quick Action: Edit */}
+              <div className="mb-8">
+                 <button 
+                   type="button" 
+                   onClick={onEditClick} 
+                   className="w-full flex items-center justify-between p-6 bg-[var(--lux-bg)] border border-[var(--lux-border)] rounded-[2rem] hover:border-[var(--lux-gold)] transition-all group shadow-sm"
+                 >
+                    <div className="flex items-center gap-5">
+                       <div className="w-12 h-12 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-500 group-hover:bg-orange-500 group-hover:text-white transition-all border border-orange-500/10">
+                          <Edit size={20} />
+                       </div>
+                       <div className="text-left">
+                          <p className="text-[11px] font-black uppercase tracking-[0.2em] text-white italic">Edit Booking Records</p>
+                          <p className="text-[8px] font-bold text-[var(--lux-muted)] uppercase tracking-widest mt-1">Modify identity, stays or financials</p>
+                       </div>
                     </div>
-                    <span className="text-[7px] font-black uppercase tracking-widest text-[var(--lux-muted)]">Message</span>
-                 </button>
-                 <button type="button" onClick={onEditClick} className="flex flex-col items-center gap-2 p-3 bg-[var(--lux-card)] border border-[var(--lux-border)] rounded-2xl hover:border-[var(--lux-gold)] transition-all group">
-                    <div className="w-8 h-8 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500 group-hover:bg-orange-500 group-hover:text-white transition-all">
-                       <Edit size={16} />
+                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-[var(--lux-muted)] group-hover:text-[var(--lux-gold)] transition-all">
+                       <ChevronRight size={18} />
                     </div>
-                    <span className="text-[7px] font-black uppercase tracking-widest text-[var(--lux-muted)]">Edit</span>
-                 </button>
-                 <button type="button" className="flex flex-col items-center gap-2 p-3 bg-[var(--lux-card)] border border-[var(--lux-border)] rounded-2xl hover:border-red-500 transition-all group">
-                    <div className="w-8 h-8 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 group-hover:bg-red-500 group-hover:text-white transition-all">
-                       <Trash2 size={16} />
-                    </div>
-                    <span className="text-[7px] font-black uppercase tracking-widest text-[var(--lux-muted)]">Cancel</span>
                  </button>
               </div>
 
