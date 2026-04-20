@@ -203,7 +203,7 @@ export const BookingDetailsDrawer = ({ booking, isOpen, onClose, onUpdate, onEdi
                   <h2 className="text-3xl font-display font-bold italic tracking-tight">Booking <span className="text-[var(--lux-gold)] shadow-[0_0_20px_rgba(212,175,55,0.2)]">Details</span></h2>
                   <p className="text-[8px] font-black uppercase text-[var(--lux-muted)] tracking-[0.3em] mt-1">ID: {booking._id?.slice(-12).toUpperCase()}</p>
                </div>
-               <button type="button" onClick={onClose} className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center hover:bg-white/10 transition-all border border-white/5 shadow-xl text-white">
+               <button type="button" onClick={onClose} className="w-12 h-12 bg-[var(--lux-soft)] rounded-2xl flex items-center justify-center hover:bg-[var(--lux-soft)]/50 transition-all border border-[var(--lux-border)] shadow-xl text-[var(--lux-text)]">
                   <ChevronRight size={24} />
                </button>
             </div>
@@ -241,7 +241,7 @@ export const BookingDetailsDrawer = ({ booking, isOpen, onClose, onUpdate, onEdi
                       {booking.guestDetails?.name?.[0]}
                     </div>
                     <div className="flex-1">
-                      <h4 className="text-xl font-bold tracking-tight text-white">{booking.guestDetails?.name}</h4>
+                      <h4 className="text-xl font-bold tracking-tight text-[var(--lux-text)]">{booking.guestDetails?.name}</h4>
                       <p className="text-xs text-[var(--lux-muted)] font-bold">{booking.guestDetails?.phone}</p>
                       <p className="text-[9px] text-[var(--lux-gold)] font-black mt-1 uppercase tracking-widest truncate max-w-[200px]">{booking.guestDetails?.email || 'N/A'}</p>
                     </div>
@@ -340,7 +340,7 @@ export const BookingDetailsDrawer = ({ booking, isOpen, onClose, onUpdate, onEdi
                           <Edit size={20} />
                        </div>
                        <div className="text-left">
-                          <p className="text-[11px] font-black uppercase tracking-[0.2em] text-white italic">Edit Booking Records</p>
+                          <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--lux-text)] italic">Edit Booking Records</p>
                           <p className="text-[8px] font-bold text-[var(--lux-muted)] uppercase tracking-widest mt-1">Modify identity, stays or financials</p>
                        </div>
                     </div>
@@ -528,7 +528,7 @@ export const BookingDetailsDrawer = ({ booking, isOpen, onClose, onUpdate, onEdi
                   )}
 
                   <div className="grid grid-cols-2 gap-4">
-                     <button type="button" onClick={() => onInvoiceClick(booking)} className="h-14 bg-black border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-zinc-900 transition-all shadow-xl">
+                     <button type="button" onClick={() => onInvoiceClick(booking)} className="h-14 bg-black text-white border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-zinc-900 transition-all shadow-xl">
                         <FileDown size={18} /> Invoice
                      </button>
                      <button type="button" onClick={onEditClick} className="h-14 bg-white text-black rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-zinc-200 transition-all shadow-xl">

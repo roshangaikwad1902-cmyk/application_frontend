@@ -602,7 +602,7 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
                      <Search size={16} className="absolute left-6 top-1/2 -translate-y-1/2 text-[var(--lux-muted)] group-focus-within:text-[var(--lux-gold)] transition-all duration-300 z-10" />
                      <input 
                        type="text" placeholder="Search registry or guests..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                       className="w-full h-14 lux-glass border border-white/10 rounded-[1.25rem] py-4 pl-16 pr-6 text-[13px] font-bold outline-none focus:border-[var(--lux-gold)] focus:ring-4 focus:ring-[var(--lux-gold)]/10 transition-all shadow-2xl placeholder:text-white/20 text-white" 
+                       className="w-full h-14 lux-glass border border-[var(--lux-border)] rounded-[1.25rem] py-4 pl-16 pr-6 text-[13px] font-bold outline-none focus:border-[var(--lux-gold)] focus:ring-4 focus:ring-[var(--lux-gold)]/10 transition-all shadow-2xl placeholder:text-[var(--lux-text-muted)] text-[var(--lux-text)]" 
                      />
                   </div>
 
@@ -852,7 +852,7 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
                                      {financials.status === 'PAID' ? <ShieldCheck size={36} /> : liveSelectedRoom.booking.guestDetails?.name?.[0]}
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                     <h4 className="text-3xl font-black tracking-tighter truncate leading-tight text-[#F5F5F7]">{liveSelectedRoom.booking.guestDetails?.name}</h4>
+                                     <h4 className="text-3xl font-black tracking-tighter truncate leading-tight text-[var(--lux-text)]">{liveSelectedRoom.booking.guestDetails?.name}</h4>
                                      <div className="flex items-center gap-3 mt-1">
                                         <p className="text-[11px] font-bold text-[#A1A1AA] uppercase tracking-[0.1em]">{liveSelectedRoom.booking.guestDetails?.phone}</p>
                                         <div className="w-1 h-1 rounded-full bg-[var(--lux-border)]"></div>
@@ -951,8 +951,8 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
                                               <TrendingUp size={18} />
                                            </div>
                                            <div className="space-y-0.5">
-                                              <p className="text-sm font-bold tracking-tight text-white">{item.name}</p>
-                                              <p className="text-[11px] font-black text-white/70 uppercase">₹{item.price}</p>
+                                              <p className="text-sm font-bold tracking-tight text-[var(--lux-text)]">{item.name}</p>
+                                              <p className="text-[11px] font-black text-[var(--lux-text-muted)] uppercase">₹{item.price}</p>
                                            </div>
                                         </div>
                                         <div className="flex items-center gap-3">
@@ -1068,9 +1068,9 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
                                      </div>
 
                                      <div className="space-y-4 relative z-10">
-                                        <div className="flex justify-between text-[11px] font-black uppercase tracking-widest text-white/50">
+                                        <div className="flex justify-between text-[11px] font-black uppercase tracking-widest text-[var(--lux-text-muted)]">
                                            <span>Wallet Health</span>
-                                           <span className="text-white font-bold">{financials.paidPercent}%</span>
+                                           <span className="text-[var(--lux-text)] font-bold">{financials.paidPercent}%</span>
                                         </div>
                                         <div className="w-full h-3 bg-[#2A2A2E] rounded-full overflow-hidden p-0.5 border border-white/5">
                                            <motion.div 

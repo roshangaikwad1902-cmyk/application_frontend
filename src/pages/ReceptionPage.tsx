@@ -199,7 +199,7 @@ export const ReceptionConsole = ({ activeHotelId, onHotelChange }: { activeHotel
         
         <div className="flex items-center gap-2 p-1.5 bg-[var(--lux-card)] rounded-xl border border-[var(--lux-border)]">
           {[{ id: 'dashboard', label: 'Ledger', icon: LayoutGrid }, { id: 'form', label: 'Check-in', icon: UserPlus }].map((v) => (
-            <button key={v.id} onClick={() => setActiveView(v.id as any)} className={`px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeView === v.id ? 'bg-[var(--lux-gold)] text-white' : 'text-[var(--lux-muted)] hover:bg-[var(--lux-bg)]'}`}>
+            <button key={v.id} onClick={() => setActiveView(v.id as any)} className={`px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeView === v.id ? 'bg-[var(--lux-gold)] text-black shadow-lg shadow-[var(--lux-gold)]/20' : 'text-[var(--lux-muted)] hover:bg-[var(--lux-bg)]'}`}>
               <span className="flex items-center gap-2"><v.icon size={12} /> {v.label}</span>
             </button>
           ))}
