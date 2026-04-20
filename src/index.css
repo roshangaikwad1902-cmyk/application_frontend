@@ -320,7 +320,8 @@
 
   /* Sticky Bottom Container */
   .sticky-action-container {
-    @apply fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-[var(--lux-bg)] to-transparent md:relative md:bg-none md:p-0 z-50;
+    @apply fixed bottom-0 left-0 right-0 p-6 bg-[var(--lux-bg)] border-t border-white/5 md:relative md:bg-transparent md:border-none md:p-0 z-50;
+    box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
   }
 
   /* Status Dot System */

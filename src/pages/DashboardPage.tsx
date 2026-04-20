@@ -584,13 +584,13 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
         {/* ROOM GRID HUB */}
         <div className="flex-1 w-full space-y-10">
             <div className="flex flex-col xl:flex-row justify-between items-center gap-8">
-               <div className="flex items-center gap-2 p-1.5 bg-[var(--lux-card)] rounded-2xl border border-white/5 shadow-inner overflow-x-auto no-scrollbar max-w-full">
+               <div className="flex items-center gap-1.5 p-1.5 bg-[var(--lux-card)] rounded-2xl border border-[var(--lux-border)] shadow-inner overflow-x-auto no-scrollbar max-w-full">
                   {['All', 'Available', 'Booked', 'Cleaning', 'Dirty'].map((f) => (
                     <button 
                       key={f}
                       type="button"
                       onClick={() => setStatusFilter(f as any)}
-                      className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-500 flex-shrink-0 ${statusFilter === f ? 'bg-[var(--lux-gradient-gold)] text-black shadow-[0_8px_20px_rgba(212,175,55,0.25)] scale-105' : 'text-[var(--lux-muted)] hover:bg-white/5 hover:text-white'}`}
+                      className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-500 flex-shrink-0 ${statusFilter === f ? 'bg-[var(--lux-gold)] text-black shadow-lg scale-105' : 'text-[var(--lux-text-muted)] hover:bg-[var(--lux-soft)] hover:text-[var(--lux-text)]'}`}
                     >
                       {f}
                     </button>
@@ -641,7 +641,7 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
                         whileHover={{ y: -4, scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => setSelectedRoom(room)}
-                        className={`room-box-saas p-0 border-[1.5px] ${isActive ? 'ring-2 ring-[var(--lux-gold)] ring-offset-4 ring-offset-black shadow-2xl !bg-[#D4AF37] !text-black !border-transparent' : statusColors[room.status] || 'bg-[var(--lux-card)]'}`}
+                        className={`room-box-saas p-0 border-[1.5px] ${isActive ? 'ring-2 ring-[var(--lux-gold)] ring-offset-4 ring-offset-[var(--lux-bg)] shadow-2xl !bg-[var(--lux-gold)] !text-black !border-transparent' : statusColors[room.status] || 'bg-[var(--lux-card)]'}`}
                       >
                          <div className="h-full flex flex-col justify-between p-5 relative">
                             {/* Status Dot */}
@@ -826,39 +826,39 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
                  animate={{ x: 0 }} 
                  exit={{ x: '100%' }}
                  transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                 className="fixed top-0 right-0 w-full md:max-w-6xl h-full bg-[var(--lux-bg)] border-l border-[var(--lux-border)] z-[501] shadow-2xl overflow-hidden flex flex-col"
+                 className="fixed top-0 bottom-0 right-0 w-full md:max-w-6xl h-full bg-[var(--lux-bg)] border-l border-[var(--lux-border)] z-[501] shadow-2xl flex flex-col"
               >
-                <div className="p-8 border-b border-white/5 flex justify-between items-center bg-[var(--lux-card)]">
+                <div className="p-6 md:p-8 border-b border-white/5 flex justify-between items-center bg-[var(--lux-card)]">
                    <div>
-                      <p className="text-[10px] font-black uppercase text-[#A1A1AA] mb-1">Perspective View</p>
-                      <h2 className="text-5xl font-display font-bold tracking-tight leading-none text-[var(--lux-text)]">Unit <span className="text-[var(--lux-gold)]">{liveSelectedRoom.number}</span></h2>
+                      <p className="text-[9px] font-black uppercase text-[var(--lux-text-muted)] mb-1">Perspective View</p>
+                      <h2 className="text-3xl md:text-5xl font-display font-bold tracking-tight leading-none text-[var(--lux-text)]">Unit <span className="text-[var(--lux-gold)]">{liveSelectedRoom.number}</span></h2>
                    </div>
-                   <button type="button" onClick={() => setSelectedRoom(null)} className="w-14 h-14 bg-[var(--lux-soft)] rounded-2xl flex items-center justify-center hover:bg-red-500 transition-all border border-white/5 shadow-xl text-[var(--lux-text)]">
-                      <X size={24} />
+                   <button type="button" onClick={() => setSelectedRoom(null)} className="w-12 h-12 md:w-14 md:h-14 bg-[var(--lux-soft)] rounded-2xl flex items-center justify-center hover:bg-red-500 transition-all border border-[var(--lux-border)] shadow-xl text-[var(--lux-text)]">
+                      <X size={20} />
                    </button>
                 </div>
 
                 {liveSelectedRoom.booking ? (() => {
                    const financials = getBookingFinancials(liveSelectedRoom.booking);
                    return (
-                      <div className="flex-1 flex flex-col md:flex-row bg-[var(--lux-bg)] overflow-hidden lg:h-full">
+                      <div className="flex-1 flex flex-col md:flex-row bg-[var(--lux-bg)] overflow-y-auto md:overflow-y-hidden pb-32 md:pb-0">
                          {/* LEFT COLUMN: GUEST & SERVICES */}
-                         <div className="flex-1 overflow-y-auto px-8 py-10 space-y-12 custom-scrollbar pb-32 md:pb-10">
+                         <div className="w-full md:flex-1 md:overflow-y-auto px-6 md:px-8 py-6 md:py-10 space-y-8 md:space-y-12 custom-scrollbar">
                             {/* Guest Quick Identity */}
                             <section className="space-y-4">
                                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--lux-text-muted)] pl-2">1. Guest Profile</p>
-                               <div className="flex items-center gap-6 p-6 bg-[#121214] border border-[#2A2A2E] rounded-[2.5rem] relative group hover:border-[var(--lux-gold)]/20 transition-all duration-500 shadow-xl">
-                                  <div className="w-20 h-20 rounded-2xl bg-[var(--lux-gold)]/10 flex items-center justify-center text-[var(--lux-gold)] font-display font-bold text-4xl border border-[var(--lux-gold)]/20 shadow-inner">
+                               <div className="flex flex-row items-center gap-4 md:gap-6 p-4 md:p-6 bg-[var(--lux-card)] border border-[var(--lux-border)] rounded-[2rem] md:rounded-[2.5rem] relative group hover:border-[var(--lux-gold)]/20 transition-all duration-500 shadow-xl">
+                                  <div className="w-14 h-14 md:w-20 md:h-20 rounded-2xl bg-[var(--lux-gold)]/10 flex items-center justify-center text-[var(--lux-gold)] font-display font-bold text-xl md:text-4xl border border-[var(--lux-gold)]/20 shadow-inner shrink-0">
                                      {financials.status === 'PAID' ? <ShieldCheck size={36} /> : liveSelectedRoom.booking.guestDetails?.name?.[0]}
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                     <h4 className="text-3xl font-black tracking-tighter truncate leading-tight text-[var(--lux-text)]">{liveSelectedRoom.booking.guestDetails?.name}</h4>
-                                     <div className="flex items-center gap-3 mt-1">
-                                        <p className="text-[11px] font-bold text-[#A1A1AA] uppercase tracking-[0.1em]">{liveSelectedRoom.booking.guestDetails?.phone}</p>
+                                     <h4 className="text-xl md:text-3xl font-black tracking-tighter truncate leading-tight text-[var(--lux-text)]">{liveSelectedRoom.booking.guestDetails?.name}</h4>
+                                     <div className="flex items-center gap-2 md:gap-3 mt-1">
+                                        <p className="text-[10px] md:text-[11px] font-bold text-[var(--lux-text-muted)] uppercase tracking-[0.1em]">{liveSelectedRoom.booking.guestDetails?.phone}</p>
                                         <div className="w-1 h-1 rounded-full bg-[var(--lux-border)]"></div>
-                                        <p className="text-[11px] font-bold text-[#D4AF37] uppercase tracking-[0.1em]">Verified Profile</p>
+                                        <p className="text-[10px] md:text-[11px] font-bold text-[var(--lux-gold)] uppercase tracking-[0.1em]">Verified</p>
                                      </div>
-                                     <div className="flex items-center gap-3 mt-4">
+                                     <div className="flex items-center gap-2 md:gap-3 mt-3 md:mt-4">
                                       {liveSelectedRoom.booking.guestDetails?.phone && (
                                          <>
                                             <button 
@@ -944,7 +944,7 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
                                      <motion.div 
                                        key={idx} 
                                        whileHover={{ scale: 1.01 }}
-                                       className="flex justify-between items-center p-5 bg-[#161616] rounded-2xl border border-white/10 group hover:border-[var(--lux-gold)]/30 transition-all shadow-sm"
+                                       className="flex justify-between items-center p-5 bg-[var(--lux-soft)] rounded-2xl border border-[var(--lux-border)] group hover:border-[var(--lux-gold)]/30 transition-all shadow-sm"
                                      >
                                         <div className="flex items-center gap-4 flex-1">
                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${item.paid ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
@@ -968,14 +968,14 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
                                         </div>
                                      </motion.div>
                                   )) : (
-                                    <div className="text-center py-10 rounded-3xl border border-dashed border-[#2A2A2E] bg-[#121214]">
-                                       <LayoutGrid size={32} className="mx-auto mb-3 text-[#6B7280]" />
-                                       <p className="text-[10px] uppercase font-black tracking-widest text-[#6B7280]">No extra charges recorded</p>
+                                    <div className="text-center py-10 rounded-3xl border border-dashed border-[var(--lux-border)] bg-[var(--lux-soft)]">
+                                       <LayoutGrid size={32} className="mx-auto mb-3 text-[var(--lux-text-muted)]" />
+                                       <p className="text-[10px] uppercase font-black tracking-widest text-[var(--lux-text-muted)]">No extra charges recorded</p>
                                     </div>
                                   )}
                                </div>
 
-                               <form onSubmit={handleAddExtraCharge} className="flex gap-3 pt-4 border-t border-white/5">
+                               <form onSubmit={handleAddExtraCharge} className="flex gap-3 pt-4 border-t border-[var(--lux-border)]">
                                   <div className="flex-1">
                                      <input 
                                         type="text" placeholder="Service Name (e.g. Dinner)" value={extraName} onChange={(e) => setExtraName(e.target.value)}
@@ -999,20 +999,20 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
 
                             {/* Settlement Form */}
                             <section className="space-y-6">
-                               <p className="text-[10px] font-black uppercase tracking-widest text-[#A1A1AA] pl-2">3. Settle Balance</p>
-                               <form onSubmit={handleSidebarPayment} className="p-8 bg-[#0F0F10] border border-[#2A2A2E] rounded-[2.5rem] space-y-6 shadow-2xl relative overflow-hidden group">
+                               <p className="text-[10px] font-black uppercase tracking-widest text-[var(--lux-text-muted)] pl-2">3. Settle Balance</p>
+                               <form onSubmit={handleSidebarPayment} className="p-8 bg-[var(--lux-card)] border border-[var(--lux-border)] rounded-[2.5rem] space-y-6 shadow-2xl relative overflow-hidden group">
                                   <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--lux-gold)]/5 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-[var(--lux-gold)]/10 transition-all duration-1000"></div>
                                   
                                   <div className="grid grid-cols-2 gap-6 relative z-10">
                                      <div className="premium-input-container">
-                                        <label className="text-[9px] font-black uppercase tracking-widest text-[#6B7280] ml-2">Offline / Cash</label>
+                                        <label className="text-[9px] font-black uppercase tracking-widest text-[var(--lux-text-muted)] ml-2">Offline / Cash</label>
                                         <input 
                                           type="number" value={cashPayment} onChange={(e) => setCashPayment(e.target.value)}
                                           placeholder="₹0" className="premium-input text-xl text-green-500 font-display" 
                                         />
                                      </div>
                                      <div className="premium-input-container">
-                                        <label className="text-[9px] font-black uppercase tracking-widest text-[#6B7280] ml-2">Online / UPI</label>
+                                        <label className="text-[9px] font-black uppercase tracking-widest text-[var(--lux-text-muted)] ml-2">Online / UPI</label>
                                         <input 
                                           type="number" value={upiPayment} onChange={(e) => setUpiPayment(e.target.value)}
                                           placeholder="₹0" className="premium-input text-xl text-blue-500 font-display" 
@@ -1030,31 +1030,31 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
                          </div>
 
                          {/* RIGHT COLUMN: SUMMARY PANEL */}
-                         <div className="w-full md:w-[380px] bg-[var(--lux-card)] border-l border-white/5 flex flex-col">
-                            <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
+                         <div className="w-full md:w-[380px] bg-[var(--lux-card)] border-t md:border-t-0 md:border-l border-[var(--lux-border)] flex flex-col">
+                            <div className="md:flex-1 md:overflow-y-auto p-6 md:p-8 space-y-8 custom-scrollbar">
                                <div className="space-y-6">
-                                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#A1A1AA]">Financial History</p>
+                                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--lux-text-muted)]">Financial History</p>
                                   
-                                  <div className="bg-[#121214] rounded-3xl p-6 border border-[#2A2A2E] space-y-4 shadow-xl">
+                                  <div className="bg-[var(--lux-card)] rounded-3xl p-6 border border-[var(--lux-border)] space-y-4 shadow-xl">
                                      <div className="flex justify-between items-center text-sm font-bold">
-                                        <span className="text-[#A1A1AA]">Room Charges:</span>
-                                        <span className="text-[#F5F5F7] font-semibold">₹{financials.total - financials.extrasTotal}</span>
+                                        <span className="text-[var(--lux-text-muted)]">Room Charges:</span>
+                                        <span className="text-[var(--lux-text)] font-semibold">₹{financials.total - financials.extrasTotal}</span>
                                      </div>
                                      <div className="flex justify-between items-center text-sm font-bold">
-                                        <span className="text-[#A1A1AA]">Extras Hub:</span>
-                                        <span className="text-[#F5F5F7] font-semibold">₹{financials.extrasTotal}</span>
+                                        <span className="text-[var(--lux-text-muted)]">Extras Hub:</span>
+                                        <span className="text-[var(--lux-text)] font-semibold">₹{financials.extrasTotal}</span>
                                      </div>
-                                     <div className="h-px bg-white/5 my-2"></div>
+                                     <div className="h-px bg-[var(--lux-border)] my-2"></div>
                                      <div className="flex justify-between items-center">
-                                        <span className="text-[11px] font-black uppercase tracking-widest text-[#6B7280]">Gross Invoice</span>
-                                        <span className="text-3xl font-display font-bold text-[#D4AF37]">₹{financials.total}</span>
+                                        <span className="text-[11px] font-black uppercase tracking-widest text-[var(--lux-text-muted)]">Gross Invoice</span>
+                                        <span className="text-3xl font-display font-bold text-[var(--lux-gold)]">₹{financials.total}</span>
                                      </div>
                                   </div>
                                </div>
 
                                <div className="space-y-6">
-                                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#A1A1AA]">Collection Dashboard</p>
-                                  <div className="bg-[#0F0F10] rounded-3xl p-8 border border-[#2A2A2E] space-y-8 relative overflow-hidden group shadow-xl">
+                                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--lux-text-muted)]">Collection Dashboard</p>
+                                  <div className="bg-[var(--lux-card)] rounded-3xl p-8 border border-[var(--lux-border)] space-y-8 relative overflow-hidden group shadow-xl">
                                      <div className="absolute inset-0 bg-gradient-to-br from-[var(--lux-gold)]/[0.02] to-transparent"></div>
                                      
                                      <div className="flex justify-between items-start relative z-10">
@@ -1106,7 +1106,7 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
                             </div>
 
                             {/* PRIMARY ACTION: CHECKOUT */}
-                            <div className="p-8 bg-[var(--lux-card)] border-t border-white/5 sticky-action-container">
+                            <div className="p-6 md:p-8 bg-[var(--lux-card)] border-t border-[var(--lux-border)] sticky bottom-0 z-20">
                                {financials.balance > 0 ? (
                                   <div className="p-6 bg-red-500/10 border border-red-500/20 rounded-[2rem] flex items-center gap-4 group">
                                      <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 shadow-inner group-hover:scale-110 transition-transform">
@@ -1129,9 +1129,9 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
                       </div>
                    );
                 })() : (
-                  <div className="flex-1 flex flex-col md:flex-row bg-[var(--lux-bg)] overflow-hidden lg:h-full">
+                  <div className="flex-1 flex flex-col md:flex-row bg-[var(--lux-bg)] overflow-y-auto md:overflow-y-hidden pb-32 md:pb-0">
                      {/* LEFT COLUMN: FORM */}
-                     <div className="flex-1 overflow-y-auto px-8 py-10 space-y-12 custom-scrollbar pb-32 md:pb-10">
+                     <div className="w-full md:flex-1 md:overflow-y-auto px-6 md:px-8 py-6 md:py-10 space-y-8 md:space-y-12 custom-scrollbar">
                         <section className="space-y-8">
                            <div className="flex items-center justify-between border-b border-white/5 pb-4">
                               <h4 className="text-xs font-black uppercase tracking-[0.3em] text-[var(--lux-gold)]">1. Guest Information</h4>
@@ -1302,7 +1302,7 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
 
                      {/* RIGHT COLUMN: SUMMARY PANEL */}
                      <div className="w-full md:w-[380px] bg-[var(--lux-card)] border-l border-white/5 flex flex-col">
-                        <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
+                        <div className="flex-1 md:overflow-y-auto p-8 space-y-8 custom-scrollbar">
                            <div className="space-y-6">
                               <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--lux-muted)]">Booking Summary</p>
                               
