@@ -23,6 +23,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { API_BASE_URL } from '../../config/constants';
 import { getBookingFinancials } from '../../utils/financials';
 import { NormalInput } from '../ui/LayoutGrid';
+import { KYCDocumentUpload } from '../common/KYCDocumentUpload';
 
 export const BookingActionsMenu = ({ booking, onAction, onViewDetails, onEdit, onDownload }: any) => {
   const queryClient = useQueryClient();
@@ -88,6 +89,38 @@ export const BookingDetailsDrawer = ({ booking, isOpen, onClose, onUpdate, onEdi
   const [extraPrice, setExtraPrice] = useState('');
   const [cashPayment, setCashPayment] = useState<string>('');
   const [upiPayment, setUpiPayment] = useState<string>('');
+  const [guestId, setGuestId] = useState<string | null>(null);
+  const [guestData, setGuestData] = useState<any>(null);
+
+  useEffect(() => {
+    if (isOpen && booking?.guestDetails?.phone) {
+      const fetchGuest = async () => {
+        try {
+          const res = await fetch(`${API_BASE_URL}/api/content/guests/search?query=${booking.guestDetails.phone}`);
+          const data = await res.json();
+          // Filter to find exact match by phone
+          const exactGuest = Array.isArray(data) ? data.find((g: any) => g.phone === booking.guestDetails.phone) : null;
+          if (exactGuest) {
+            setGuestId(exactGuest._id);
+            setGuestData(exactGuest);
+          }
+        } catch (err) { console.error("Guest fetch failed", err); }
+      };
+      fetchGuest();
+    }
+    if (!isOpen) {
+      setGuestId(null);
+      setGuestData(null);
+    }
+  }, [isOpen, booking?.guestDetails?.phone]);
+
+  const handleKycSuccess = (url: string) => {
+    setGuestData((prev: any) => ({
+      ...prev,
+      documents: { ...prev?.documents, mergedKycUrl: url }
+    }));
+    onUpdate && onUpdate();
+  };
 
   if (!booking) return null;
   const nights = Math.max(1, Math.ceil((new Date(booking.checkout).getTime() - new Date(booking.checkin).getTime()) / (1000 * 60 * 60 * 24)));
@@ -201,78 +234,101 @@ export const BookingDetailsDrawer = ({ booking, isOpen, onClose, onUpdate, onEdi
                       KYC: {booking.guestDetails?.photo ? 'Verified' : 'Pending'}
                    </div>
                 </div>
-                <div className="flex items-center gap-4 relative z-10">
-                  <div className="w-16 h-16 rounded-2xl bg-[var(--lux-gold)]/10 flex items-center justify-center text-[var(--lux-gold)] font-bold text-2xl border border-[var(--lux-gold)]/20">
-                    {booking.guestDetails?.name?.[0]}
+                
+                <div className="flex items-center justify-between gap-4 relative z-10 mb-8">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-2xl bg-[var(--lux-gold)]/10 flex items-center justify-center text-[var(--lux-gold)] font-bold text-2xl border border-[var(--lux-gold)]/20">
+                      {booking.guestDetails?.name?.[0]}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-xl font-bold tracking-tight text-white">{booking.guestDetails?.name}</h4>
+                      <p className="text-xs text-[var(--lux-muted)] font-bold">{booking.guestDetails?.phone}</p>
+                      <p className="text-[9px] text-[var(--lux-gold)] font-black mt-1 uppercase tracking-widest truncate max-w-[200px]">{booking.guestDetails?.email || 'N/A'}</p>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <h4 className="text-xl font-bold tracking-tight">{booking.guestDetails?.name}</h4>
-                    <p className="text-xs text-[var(--lux-muted)] font-bold">{booking.guestDetails?.phone}</p>
-                    <p className="text-[9px] text-[var(--lux-gold)] font-black mt-1 uppercase tracking-widest truncate max-w-[200px]">{booking.guestDetails?.email || 'N/A'}</p>
+
+                  <div className="flex items-center gap-2">
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        const num = booking.guestDetails?.phone?.replace(/\D/g, '');
+                        if (num) window.open(`tel:${num.startsWith('91') ? '+' : ''}${num}`);
+                      }}
+                      className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all shadow-sm"
+                      title="Call Guest"
+                    >
+                        <Phone size={16} />
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const guest = booking.guestDetails;
+                        const fin = financials;
+                        const phone = guest?.phone?.replace(/\D/g, '');
+                        if (!phone) return toast.error("Mobile number missing");
+                        
+                        const formattedPhone = phone.length === 10 ? `91${phone}` : phone;
+                        const guestName = guest.name ? guest.name.charAt(0).toUpperCase() + guest.name.slice(1) : 'Guest';
+
+                        const messageParts = [
+                          `*Hello ${guestName},*`,
+                          `Your booking invoice from *Hotel Samrat* is ready.`,
+                          `--------------------------------`,
+                          `STAY DETAILS`,
+                          `*Room:* ${booking.roomNumber || '---'}`,
+                          `*Check-in:* ${new Date(booking.checkin).toLocaleDateString('en-IN')}`,
+                          `*Check-out:* ${new Date(booking.checkout).toLocaleDateString('en-IN')}`,
+                          `--------------------------------`,
+                          `BILLING SUMMARY`,
+                          `*Total Amount:* ₹${fin.total}`,
+                          `*Paid:* ₹${fin.paid}`,
+                          fin.balance > 0 ? `*Balance Due:* ₹${fin.balance}` : `*Payment Completed*`,
+                          `\nThank you for choosing us!`
+                        ];
+
+                        const message = messageParts.join('\n');
+                        toast.info("Opening WhatsApp...");
+                        window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`, '_blank');
+                      }}
+                      className="w-10 h-10 rounded-full bg-green-500/10 text-green-500 flex items-center justify-center hover:bg-green-500 hover:text-white transition-all shadow-sm hover:shadow-[0_0_15px_rgba(34,197,94,0.4)]"
+                      title="Send Invoice via WhatsApp"
+                    >
+                        <MessageCircle size={16} />
+                    </button>
                   </div>
-                   <div className="flex items-center gap-2">
-                      <button 
-                        type="button" 
-                        onClick={() => {
-                          const num = booking.guestDetails?.phone?.replace(/\D/g, '');
-                          if (num) window.open(`tel:${num.startsWith('91') ? '+' : ''}${num}`);
-                        }}
-                        className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all shadow-sm"
-                        title="Call Guest"
-                      >
-                         <Phone size={16} />
-                      </button>
-                      <button 
-                        type="button" 
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          const guest = booking.guestDetails;
-                          const fin = financials;
-                          const phone = guest?.phone?.replace(/\D/g, '');
-                          if (!phone) return toast.error("Mobile number missing");
-                          
-                          const formattedPhone = phone.length === 10 ? `91${phone}` : phone;
-                          const guestName = guest.name ? guest.name.charAt(0).toUpperCase() + guest.name.slice(1) : 'Guest';
-
-                          // Use CodePoints to avoid any encoding-related diamond issues
-                          const h = String.fromCodePoint(0x1F3E8); // Hotel
-                          const b = String.fromCodePoint(0x1F4B0); // Money Bag
-                          const w = String.fromCodePoint(0x26A0) + String.fromCodePoint(0xFE0F); // Warning
-                          const s = String.fromCodePoint(0x2705); // Success
-                          const p = String.fromCodePoint(0x1F64F); // Prayer
-                          const r = String.fromCodePoint(0x20B9); // Rupee
-
-                          const messageParts = [
-                            `*Hello ${guestName},*`,
-                            `Your booking invoice from *Hotel Samrat* is ready.`,
-                            `--------------------------------`,
-                            `${h} *STAY DETAILS*`,
-                            `--------------------------------`,
-                            `*Room:* ${booking.roomNumber || '---'}`,
-                            `*Check-in:* ${new Date(booking.checkin).toLocaleDateString('en-IN')}`,
-                            `*Check-out:* ${new Date(booking.checkout).toLocaleDateString('en-IN')}`,
-                            `--------------------------------`,
-                            `${b} *BILLING SUMMARY*`,
-                            `--------------------------------`,
-                            `*Total Amount:* ${r}${fin.total}`,
-                            `*Paid:* ${r}${fin.paid}`,
-                            fin.balance > 0 ? `*${w} Balance:* ${r}${fin.balance}` : `${s} *Payment Completed*`,
-                            `\nThank you for choosing us! ${p}`
-                          ];
-
-                          const finalMessage = messageParts.join('\n');
-                          toast.info("Opening WhatsApp...");
-                          window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(finalMessage)}`, '_blank');
-                        }}
-                        className="w-10 h-10 rounded-full bg-green-500/10 text-green-500 flex items-center justify-center hover:bg-green-500 hover:text-white transition-all shadow-sm hover:shadow-[0_0_15px_rgba(34,197,94,0.4)]"
-                        title="Send Invoice via WhatsApp"
-                      >
-                         <MessageCircle size={16} />
-                      </button>
-                   </div>
                 </div>
-              </div>              {/* Quick Action: Edit */}
+
+                {/* KYC Document Segment */}
+                {guestId && (
+                  <div className="space-y-4">
+                    {guestData?.documents?.mergedKycUrl ? (
+                      <div className="p-6 bg-[var(--lux-card)] border border-[var(--lux-border)] rounded-[2rem] overflow-hidden shadow-2xl relative">
+                         <div className="flex items-center justify-between mb-4">
+                            <div>
+                               <h4 className="text-[12px] font-black uppercase tracking-widest text-green-500 flex items-center gap-2">
+                                 <CheckCircle size={14} /> KYC ARCHIVED
+                               </h4>
+                               <p className="text-[8px] font-black uppercase text-[var(--lux-muted)] tracking-widest mt-1">Consolidated Identity Grid</p>
+                            </div>
+                            <button onClick={() => window.open(guestData.documents.mergedKycUrl, '_blank')} className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-[var(--lux-gold)] hover:text-black transition-all">View Full</button>
+                         </div>
+                         <div className="aspect-square rounded-2xl overflow-hidden border border-white/10 shadow-inner group relative cursor-pointer" onClick={() => window.open(guestData.documents.mergedKycUrl, '_blank')}>
+                            <img src={guestData.documents.mergedKycUrl} alt="KYC Grid" className="w-full h-full object-cover group-hover:scale-105 transition-all duration-700" />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                               <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white">Open High-Res</p>
+                            </div>
+                         </div>
+                      </div>
+                    ) : (
+                      <KYCDocumentUpload guestId={guestId} onSuccess={handleKycSuccess} />
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Quick Action: Edit */}
               <div className="mb-8">
                  <button 
                    type="button" 
@@ -344,7 +400,9 @@ export const BookingDetailsDrawer = ({ booking, isOpen, onClose, onUpdate, onEdi
                        <p className="text-[8px] font-black uppercase text-[var(--lux-gold)]">11:00 AM</p>
                     </div>
                  </div>
-              </div>               {/* Extra Services Section */}
+              </div>
+
+               {/* Extra Services Section */}
                <div className="p-6 bg-[var(--lux-card)] rounded-[2rem] border border-[var(--lux-border)] space-y-6 shadow-sm">
                   <div className="flex justify-between items-center px-2">
                     <p className="text-[10px] font-black uppercase text-[var(--lux-muted)] tracking-widest">Extra Services / Food</p>
@@ -489,6 +547,7 @@ export const BookingDetailsDrawer = ({ booking, isOpen, onClose, onUpdate, onEdi
 export const EditBookingDrawer = ({ booking, isOpen, onClose, onUpdate }: any) => {
   const [formData, setFormData] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [newKycUrl, setNewKycUrl] = useState<string>('');
 
   useEffect(() => {
     if (booking) {
@@ -505,8 +564,10 @@ export const EditBookingDrawer = ({ booking, isOpen, onClose, onUpdate }: any) =
         onlinePaid: booking.onlinePaid || 0,
         bookingSource: booking.bookingSource || 'walk_in',
         bookingPlatform: booking.bookingPlatform || '',
-        otaPaymentType: booking.otaPaymentType || 'pay_at_hotel'
+        otaPaymentType: booking.otaPaymentType || 'pay_at_hotel',
+        mergedKycUrl: booking.guestDetails?.mergedKycUrl || ''
       });
+      setNewKycUrl(booking.guestDetails?.mergedKycUrl || '');
     }
   }, [booking]);
 
@@ -521,7 +582,12 @@ export const EditBookingDrawer = ({ booking, isOpen, onClose, onUpdate }: any) =
           'Authorization': `Bearer ${localStorage.getItem('hotel_token')}`
         },
         body: JSON.stringify({
-          guestDetails: { name: formData.name, phone: formData.phone, email: formData.email },
+          guestDetails: { 
+            name: formData.name, 
+            phone: formData.phone, 
+            email: formData.email,
+            mergedKycUrl: newKycUrl 
+          },
           stayDetails: { checkin: formData.checkin, checkout: formData.checkout, roomNumber: formData.roomNumber },
           paymentDetails: { 
             totalAmount: formData.totalAmount, 
@@ -531,7 +597,8 @@ export const EditBookingDrawer = ({ booking, isOpen, onClose, onUpdate }: any) =
           },
           bookingSource: formData.bookingSource,
           bookingPlatform: formData.bookingPlatform,
-          otaPaymentType: formData.otaPaymentType
+          otaPaymentType: formData.otaPaymentType,
+          mergedKycUrl: newKycUrl
         })
       });
       if (res.ok) {
@@ -630,6 +697,15 @@ export const EditBookingDrawer = ({ booking, isOpen, onClose, onUpdate }: any) =
                          <span className={`text-lg font-bold ${formData.totalAmount - ((Number(formData.offlinePaid) || 0) + (Number(formData.onlinePaid) || 0)) > 0 ? 'text-red-500' : 'text-green-500'}`}>₹{formData.totalAmount - ((Number(formData.offlinePaid) || 0) + (Number(formData.onlinePaid) || 0))}</span>
                       </div>
                    </div>
+                </div>
+
+                <div className="space-y-4 pt-4 border-t border-white/5">
+                   <p className="text-[8px] font-black uppercase tracking-widest text-[var(--lux-muted)]">Identity Verification (KYC)</p>
+                    <KYCDocumentUpload 
+                       guestId="new" 
+                       guestCount={booking.guests || 1}
+                       onSuccess={(url) => setNewKycUrl(url)} 
+                    />
                 </div>
 
                 <button type="submit" disabled={isSaving} className="w-full py-4 bg-[var(--lux-gold)] text-black rounded-xl font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-[var(--lux-gold)]/20 active:scale-95 transition-all">

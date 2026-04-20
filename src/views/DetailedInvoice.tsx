@@ -60,9 +60,9 @@ export const DetailedInvoice = ({ booking, hotel }: { booking: any, hotel: any }
             <span className="font-bold">Room</span><span>:</span><span>{booking.roomType} / {booking.roomNumber}</span>
             <span className="font-bold">No of Person</span><span>:</span><span>{booking.guests || 2} (A) / 0 (C)</span>
             <span className="font-bold">Rate Type</span><span>:</span><span>EP</span>
-            <span className="font-bold">No of Nights</span><span>:</span><span>{Math.max(1, Math.ceil((new Date(booking.checkout).getTime() - new Date(booking.checkin).getTime()) / (1000 * 60 * 60 * 24)))}</span>
-            <span className="font-bold">Date of Arrival</span><span>:</span><span>{new Date(booking.checkin).toLocaleString('en-IN')}</span>
-            <span className="font-bold">Date of Departure</span><span>:</span><span>{(booking.checked_out_at ? new Date(booking.checked_out_at) : new Date(booking.checkout)).toLocaleString('en-IN')}</span>
+            <span className="font-bold">No of Nights</span><span>:</span><span>{Math.max(1, Math.round((new Date(booking.checkout).getTime() - new Date(booking.checkin).getTime()) / (1000 * 60 * 60 * 24)))}</span>
+            <span className="font-bold">Date of Arrival</span><span>:</span><span>{booking.checkedInAt ? new Date(booking.checkedInAt).toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : new Date(booking.checkin).toLocaleDateString('en-IN')}</span>
+            <span className="font-bold">Date of Departure</span><span>:</span><span>{booking.checked_out_at ? new Date(booking.checked_out_at).toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : new Date(booking.checkout).toLocaleDateString('en-IN')}</span>
         </div>
       </div>
 

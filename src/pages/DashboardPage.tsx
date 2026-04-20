@@ -19,14 +19,15 @@ import {
   Receipt,
   Grid,
   Clock,
-  CheckCircle,
   Phone,
-  MessageCircle
+  MessageCircle,
+  Users
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { API_BASE_URL } from '../config/constants';
 import { getBookingFinancials } from '../utils/financials';
+import { KYCDocumentUpload } from '../components/common/KYCDocumentUpload';
 import { 
   useHotelsList, 
   useRoomStatus, 
@@ -64,6 +65,9 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
   const [checkinDate, setCheckinDate] = useState<string>(new Date().toLocaleDateString('en-CA'));
   const [checkoutDate, setCheckoutDate] = useState<string>(new Date(Date.now() + 86400000).toLocaleDateString('en-CA'));
   const [invoiceType, setInvoiceType] = useState<'gst' | 'non-gst'>('non-gst');
+  const [guestsCount, setGuestsCount] = useState<number>(1);
+  const [tempKycUrl, setTempKycUrl] = useState<string>('');
+  const [foundGuestId, setFoundGuestId] = useState<string | null>(null);
 
   // Date Logic
   const adjustDate = (type: 'checkin' | 'checkout', amount: number) => {
@@ -140,9 +144,12 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
             setCiSource(guest.bookingSource || 'walk_in');
             setCiPlatform(guest.bookingPlatform || '');
             setCiOtaPayType(guest.otaPaymentType || 'pay_at_hotel');
+            setFoundGuestId(guest._id || guest.id);
             toast.info(`Returning Guest Identified: ${guest.name.toUpperCase()}`, {
               description: "Manifest records have been automatically synchronized."
             });
+          } else {
+            setFoundGuestId(null);
           }
         })
         .catch(err => console.error("Smart lookup error:", err));
@@ -258,7 +265,8 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
             price: roomType.price, 
             roomId: roomType.id, 
             status,
-            booking: curBooking
+            booking: curBooking,
+            lastStatusUpdate: manStatus?.updatedAt || manStatus?.createdAt || null
           });
         });
       });
@@ -292,21 +300,53 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
     return groups;
   }, [filteredRooms]);
 
-  const TimeAgo = ({ date }: { date: string }) => {
+  const TimeAgo = ({ date }: { date: string | Date | null | undefined }) => {
     const [time, setTime] = useState('');
     useEffect(() => {
+      if (!date) {
+        setTime('...');
+        return;
+      }
       const update = () => {
-        const diff = Date.now() - new Date(date).getTime();
+        let dDate = new Date(date);
+        const dateStr = typeof date === 'string' ? date : '';
+        const todayLocal = new Date().toLocaleDateString('en-CA');
+        const datePart = dateStr.split('T')[0];
+
+        // Normalize Date-only/Midnight-UTC markers to Local Midnight
+        const isDateOnlyFlag = (dateStr.length <= 10 && !dateStr.includes('T')) || dateStr.includes('T00:00:00');
+        if (isDateOnlyFlag) {
+          const [y, m, d] = datePart.split('-').map(Number);
+          dDate = new Date(y, m - 1, d);
+        }
+
+        if (isNaN(dDate.getTime())) {
+          setTime('...');
+          return;
+        }
+
+        const now = Date.now();
+        const diff = now - dDate.getTime();
+        
+        // If it's more than 2 minutes in the future (tomorrow+) and NOT today, show "Arrival"
+        if (diff < -120000 && datePart !== todayLocal) {
+           setTime('Arrival');
+           return;
+        }
+
         const mins = Math.max(0, Math.floor(diff / 60000));
         const hours = Math.floor(mins / 60);
-        if (hours > 0) setTime(`${hours}h ${mins % 60}m`);
+        const days = Math.floor(hours / 24);
+        
+        if (days > 0) setTime(`${days}d ${hours % 24}h`);
+        else if (hours > 0) setTime(`${hours}h ${mins % 60}m`);
         else setTime(`${mins}m`);
       };
       update();
       const interval = setInterval(update, 60000);
       return () => clearInterval(interval);
     }, [date]);
-    return <span className="text-black">{time}</span>;
+    return <span className="text-inherit">{time}</span>;
   };
 
   const handleUpdateRoomStatus = async (roomNumber: string, status: string) => {
@@ -483,7 +523,7 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
         checkin: checkin.toISOString(),
         checkout: checkout.toISOString(),
         roomNumber: liveSelectedRoom.number,
-        guests: 1, // Fix: Schema requirement
+        guests: guestsCount, 
         totalAmount: finalTotal,
         paidAmount: totalPaidCheckIn,
         offlinePaid: checkInOffline,
@@ -491,7 +531,8 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
         guestDetails: {
           name: guestName,
           phone: guestMobile,
-          email: guestEmail || 'guest@example.com'
+          email: guestEmail || 'guest@example.com',
+          mergedKycUrl: tempKycUrl
         },
         bookingSource: ciSource,
         bookingPlatform: ciPlatform,
@@ -644,7 +685,7 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
                                     </div>
                                     <div className="text-right flex flex-col items-end">
                                        <span className={`text-[10px] font-black ${isActive ? 'text-black/60' : 'text-black'}`}>
-                                          <TimeAgo date={room.booking.checkin} />
+                                          <TimeAgo date={room.booking?.checkedInAt || room.booking?.createdAt || room.booking?.checkin} />
                                        </span>
                                        <span className={`text-[8px] font-bold opacity-20 italic ${isActive ? 'text-black/20' : ''}`}>
                                           {room.status === 'Booked' ? 'ELAPSED' : 'STANDBY'}
@@ -653,8 +694,22 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
                                  </div>
                                ) : (
                                  <div className="flex justify-between items-center">
-                                    <span className={`text-[10px] font-black uppercase tracking-widest opacity-30 ${isActive ? 'text-black/40' : ''}`}>{room.status}</span>
-                                    <span className={`text-[9px] font-bold opacity-20 italic ${isActive ? 'text-black/20' : ''}`}>STANDBY</span>
+                                    <div className="flex flex-col">
+                                       <span className={`text-[10px] font-black uppercase tracking-widest opacity-30 ${isActive ? 'text-black/40' : ''}`}>{room.status}</span>
+                                       <span className={`text-[8px] font-bold opacity-20 italic ${isActive ? 'text-black/20' : ''}`}>
+                                          {room.status === 'Dirty' ? 'VACANT SINCE' : (room.status === 'Cleaning' ? 'CLEANING SINCE' : 'STANDBY')}
+                                       </span>
+                                    </div>
+                                    {(room.status === 'Dirty' || room.status === 'Cleaning') && (
+                                       <div className="text-right">
+                                          <span className={`text-[10px] font-black ${isActive ? 'text-black/60' : 'text-black'}`}>
+                                             <TimeAgo date={room.lastStatusUpdate} />
+                                          </span>
+                                       </div>
+                                    )}
+                                    {room.status === 'Available' && (
+                                       <span className={`text-[9px] font-bold opacity-20 italic ${isActive ? 'text-black/20' : ''}`}>STANDBY</span>
+                                    )}
                                  </div>
                                )}
                             </div>
@@ -1114,6 +1169,32 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
                                     type="email" value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)}
                                     placeholder="guest@example.com"
                                     className="premium-input"
+                                 />
+                              </div>
+
+                              <div className="premium-input-container md:col-span-2">
+                                 <label className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--lux-gold)] ml-1 opacity-80 mb-2">
+                                    <Users size={12} className="text-[var(--lux-gold)]" /> Number of Guests
+                                 </label>
+                                 <div className="flex gap-2 p-1 bg-black/20 rounded-2xl border border-white/5">
+                                    {[1, 2, 3, 4].map(num => (
+                                       <button 
+                                          key={num}
+                                          type="button"
+                                          onClick={() => setGuestsCount(num)}
+                                          className={`flex-1 py-3 rounded-xl text-[11px] font-black transition-all ${guestsCount === num ? 'bg-[var(--lux-gold)] text-black shadow-lg scale-105' : 'text-[var(--lux-muted)] hover:bg-white/5 hover:text-white'}`}
+                                       >
+                                          {num}
+                                       </button>
+                                    ))}
+                                 </div>
+                              </div>
+
+                              <div className="md:col-span-2 pt-4">
+                                 <KYCDocumentUpload 
+                                    guestId={foundGuestId || 'new'} 
+                                    guestCount={guestsCount}
+                                    onSuccess={(url) => setTempKycUrl(url)} 
                                  />
                               </div>
                            </div>

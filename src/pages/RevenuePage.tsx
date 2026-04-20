@@ -369,7 +369,7 @@ export const RevenuePage = ({ activeHotelId, onReportClick }: any) => {
                     'Booking.com': 'bg-gradient-to-r from-blue-700 to-blue-500', 
                     'Agoda': 'bg-gradient-to-r from-purple-600 to-purple-400', 
                     'OYO': 'bg-gradient-to-r from-red-700 to-red-500', 
-                    'Walk-in': 'bg-[var(--lux-gradient-gold)]' 
+                    'Walk-in': 'bg-gradient-to-r from-[#D4AF37] to-[#BC972D]' 
                   };
                   return (
                     <div key={name} className="space-y-3">
