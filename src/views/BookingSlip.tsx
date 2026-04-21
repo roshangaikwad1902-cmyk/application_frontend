@@ -12,7 +12,7 @@ export const BookingSlip = ({ booking, hotel }: { booking: any, hotel: any }) =>
         <img 
           src="/logo.jpg" 
           alt="Bhagat Group" 
-          className="h-40 w-auto mix-blend-multiply invert-[1] brightness-90 contrast-125 mb-4" 
+          className="h-64 w-auto mix-blend-multiply invert-[1] brightness-90 contrast-125 mb-4" 
         />
         <h1 className="text-xl font-black uppercase tracking-widest mb-1">{hotel?.name}</h1>
         <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.3em]">Official Reservation Manifest</p>

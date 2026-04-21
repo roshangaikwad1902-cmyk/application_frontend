@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL } from '../config/constants';
 
 export const useActiveBookings = (hotelId: string) => {
     return useQuery({

@@ -80,7 +80,7 @@ export const FutureBookingPage = ({ activeHotelId, onSlipClick }: any) => {
   
   // 2. Form State
   const [formData, setFormData] = useState({
-    name: '', phone: '', email: '',
+    name: '', phone: '', email: '', address: '',
     offlinePaid: 0, onlinePaid: 0, 
     paymentMethod: 'UPI',
     bookingSource: 'walk_in', bookingPlatform: '', otaPaymentType: 'pay_at_hotel',
@@ -188,6 +188,7 @@ export const FutureBookingPage = ({ activeHotelId, onSlipClick }: any) => {
               ...prev, 
               name: guest.name, 
               email: guest.email || '',
+              address: guest.address || '',
               bookingSource: guest.bookingSource || 'walk_in',
               bookingPlatform: guest.bookingPlatform || '',
               otaPaymentType: guest.otaPaymentType || 'pay_at_hotel'
@@ -218,7 +219,7 @@ export const FutureBookingPage = ({ activeHotelId, onSlipClick }: any) => {
     const tid = toast.loading("Processing Future Reservation...");
     try {
       const payload = {
-        guestDetails: { name: formData.name, phone: formData.phone, email: formData.email },
+        guestDetails: { name: formData.name, phone: formData.phone, email: formData.email, address: formData.address },
         stayDetails: {
           hotel_id: activeHotelId,
           room_id: selectedRoom.roomId,
@@ -251,7 +252,7 @@ export const FutureBookingPage = ({ activeHotelId, onSlipClick }: any) => {
         toast.success("FUTURE RESERVATION CONFIRMED", { id: tid });
         onSlipClick(data.booking);
         queryClient.invalidateQueries({ queryKey: ['availability'] });
-        setFormData({ name: '', phone: '', email: '', offlinePaid: 0, onlinePaid: 0, paymentMethod: 'UPI', bookingSource: 'walk_in', bookingPlatform: '', otaPaymentType: 'pay_at_hotel', guests: 1 });
+        setFormData({ name: '', phone: '', email: '', address: '', offlinePaid: 0, onlinePaid: 0, paymentMethod: 'UPI', bookingSource: 'walk_in', bookingPlatform: '', otaPaymentType: 'pay_at_hotel', guests: 1 });
         setSelectedRoom(null);
       } else throw new Error("Manifest creation failed");
     } catch (err: any) {
@@ -274,15 +275,15 @@ export const FutureBookingPage = ({ activeHotelId, onSlipClick }: any) => {
               </div>
            </div>
 
-           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-6 w-full xl:w-auto bg-[var(--lux-card)] p-2 rounded-2xl border border-white/5 shadow-inner">
-              <div className="flex items-center justify-between sm:justify-start gap-3 sm:gap-4 px-3 sm:px-4">
-                <div className="flex flex-col flex-1 sm:flex-none">
-                  <span className="text-[8px] font-black uppercase opacity-30">Check-In</span>
+           <div className="flex w-full xl:w-auto bg-[var(--lux-card)] p-2 rounded-2xl border border-white/5 shadow-inner">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between sm:justify-start gap-4 sm:gap-4 px-3 sm:px-4 w-full">
+                <div className="flex flex-col w-full sm:w-auto">
+                  <span className="text-[8px] font-black uppercase opacity-30 mb-1">Check-In</span>
                   <PremiumDatePicker value={targetDate} onChange={handleTargetDateChange} />
                 </div>
-                <ArrowRight size={14} className="opacity-20 mt-3 sm:mt-4 shrink-0" />
-                <div className="flex flex-col flex-1 sm:flex-none">
-                  <span className="text-[8px] font-black uppercase opacity-30">Check-Out</span>
+                <ArrowRight size={14} className="hidden sm:block opacity-20 mt-4 shrink-0" />
+                <div className="flex flex-col w-full sm:w-auto">
+                  <span className="text-[8px] font-black uppercase opacity-30 mb-1">Check-Out</span>
                   <PremiumDatePicker value={checkoutDate} onChange={handleCheckoutDateChange} />
                 </div>
               </div>
@@ -346,7 +347,8 @@ export const FutureBookingPage = ({ activeHotelId, onSlipClick }: any) => {
                                  bookingSource: p.bookingSource || 'walk_in',
                                  bookingPlatform: p.bookingPlatform || '',
                                  otaPaymentType: p.otaPaymentType || 'pay_at_hotel',
-                                 guests: b.stayDetails?.guests || 1
+                                 guests: b.stayDetails?.guests || 1,
+                                 address: b.guestDetails?.address || ''
                               });
                            } else {
                               setFormData({
@@ -354,7 +356,8 @@ export const FutureBookingPage = ({ activeHotelId, onSlipClick }: any) => {
                                  offlinePaid: 0, onlinePaid: 0, 
                                  paymentMethod: 'UPI',
                                  bookingSource: 'walk_in', bookingPlatform: '', otaPaymentType: 'pay_at_hotel',
-                                 guests: 1
+                                 guests: 1,
+                                 address: ''
                               });
                            }
                         }}
@@ -466,6 +469,7 @@ export const FutureBookingPage = ({ activeHotelId, onSlipClick }: any) => {
                         <div className="space-y-5">
                            <NormalInput label="Contact Mobile" value={formData.phone} onChange={(v: string) => setFormData({...formData, phone: v})} placeholder="+91 XXX XXX XXXX" />
                            <NormalInput label="Full Identity Name" value={formData.name} onChange={(v: string) => setFormData({...formData, name: v})} placeholder="As per Valid ID" />
+                           <NormalInput label="Full Address" value={formData.address} onChange={(v: string) => setFormData({...formData, address: v})} placeholder="Street, City, State..." />
                         </div>
                      </div>
 

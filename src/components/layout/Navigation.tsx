@@ -12,7 +12,8 @@ import {
   Sun,
   Moon,
   CreditCard,
-  Clock as ClockIcon
+  Clock as ClockIcon,
+  Settings as SettingsIcon
 } from 'lucide-react';
 
 const LiveClock = () => {
@@ -117,6 +118,7 @@ export const Sidebar = ({ theme, isOpen, setIsOpen, onLogout }: any) => {
     { icon: Sparkles, label: 'Future Booking', path: '/future-booking' },
     { icon: Calendar, label: 'Bookings', path: '/bookings' },
     { icon: CreditCard, label: 'Payments', path: '/payments' },
+    { icon: SettingsIcon, label: 'Settings', path: '/settings' },
   ];
 
   return (

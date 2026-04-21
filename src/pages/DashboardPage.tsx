@@ -21,10 +21,12 @@ import {
   Clock,
   Phone,
   MessageCircle,
-  Users
+  Users,
+  CheckCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { triggerHaptic } from '../utils/haptics';
 import { API_BASE_URL } from '../config/constants';
 import { getBookingFinancials } from '../utils/financials';
 import { KYCDocumentUpload } from '../components/common/KYCDocumentUpload';
@@ -49,6 +51,8 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
   const [guestName, setGuestName] = useState('');
   const [guestMobile, setGuestMobile] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
+  const [guestAddress, setGuestAddress] = useState('');
+  const [guestGstNo, setGuestGstNo] = useState('');
   const [offlineAmount, setOfflineAmount] = useState<string>('');
   const [onlineAmount, setOnlineAmount] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<string>('Cash');
@@ -124,10 +128,14 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
       setGuestName(booking.guestDetails?.name || '');
       setGuestMobile(booking.guestDetails?.phone || '');
       setGuestEmail(booking.guestDetails?.email || '');
+      setGuestAddress(booking.guestDetails?.address || '');
+      setGuestGstNo(booking.guestDetails?.guestGstNo || '');
     } else {
       setGuestName('');
       setGuestMobile('');
       setGuestEmail('');
+      setGuestAddress('');
+      setGuestGstNo('');
     }
   }, [selectedRoom?.number, selectedRoom?.booking]);
 
@@ -141,6 +149,8 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
             const guest = data[0];
             setGuestName(guest.name || '');
             setGuestEmail(guest.email || '');
+            setGuestAddress(guest.address || '');
+            setGuestGstNo(guest.guestGstNo || '');
             setCiSource(guest.bookingSource || 'walk_in');
             setCiPlatform(guest.bookingPlatform || '');
             setCiOtaPayType(guest.otaPaymentType || 'pay_at_hotel');
@@ -188,6 +198,7 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
   const { data: availabilityMap = { occupied: [], blocked: [] } } = useRoomAvailabilityMap(activeHotelId, getLocalDateStr(), getLocalDateStr(1));
 
   const handleIntegratedCheckIn = async (booking: any) => {
+    triggerHaptic('heavy');
     const tid = toast.loading(`Checking-in ${booking.guestDetails?.name}...`);
     try {
       const res = await fetch(`${API_BASE_URL}/api/content/bookings/admin/${booking._id}/check-in`, {
@@ -200,6 +211,7 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
       if (res.ok) {
         toast.success("Guest Checked-in Successfully!", { id: tid });
         queryClient.invalidateQueries({ queryKey: ['active-bookings'] });
+        queryClient.invalidateQueries({ queryKey: ['bookings', activeHotelId] });
         queryClient.invalidateQueries({ queryKey: ['admin-bookings-all'] });
         queryClient.invalidateQueries({ queryKey: ['room-status'] });
       } else {
@@ -446,9 +458,38 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
         refetchAll();
         queryClient.invalidateQueries({ queryKey: ['active-bookings'] });
         queryClient.invalidateQueries({ queryKey: ['admin-bookings-all'] });
-      }
+      } else throw new Error("Extra Charge Failed");
     } catch (err: any) { toast.error(err.message); }
     finally { setIsSubmitting(false); }
+  };
+
+  const handleApplyGST = async (apply: boolean) => {
+    const booking = liveSelectedRoom?.booking;
+    if (!booking) return;
+
+    const roomCharges = Number(booking.totalAmount) || 0;
+    const gstAmount = apply ? Math.round(roomCharges * 0.05) : 0;
+    const invoiceType = apply ? 'gst' : 'non-gst';
+
+    setIsSubmitting(true);
+    const tid = toast.loading(apply ? "Applying 5% GST..." : "Removing GST...");
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/content/bookings/admin/${booking._id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('hotel_token')}` },
+        body: JSON.stringify({ gstAmount, invoiceType })
+      });
+      if (res.ok) {
+        toast.success(apply ? "5% GST Added to Ledger" : "GST Removed", { id: tid });
+        refetchAll();
+        queryClient.invalidateQueries({ queryKey: ['admin-bookings-all'] });
+        queryClient.invalidateQueries({ queryKey: ['active-bookings'] });
+      } else throw new Error("Tax Update Failed");
+    } catch (err: any) {
+      toast.error(err.message, { id: tid });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDeleteExtraCharge = async (index: number) => {
@@ -532,6 +573,8 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
           name: guestName,
           phone: guestMobile,
           email: guestEmail || 'guest@example.com',
+          address: guestAddress,
+          guestGstNo: guestGstNo,
           mergedKycUrl: tempKycUrl
         },
         bookingSource: ciSource,
@@ -553,7 +596,7 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
 
       if (res.ok) {
         toast.success("CHECK-IN SUCCESSFUL", { id: tid });
-        setGuestName(''); setGuestMobile(''); setGuestEmail('');
+        setGuestName(''); setGuestMobile(''); setGuestEmail(''); setGuestAddress(''); setGuestGstNo('');
         setOfflineAmount(''); setOnlineAmount('');
         setCiSource('walk_in'); setCiPlatform(''); setCiOtaPayType('pay_at_hotel');
         refetchAll();
@@ -1033,26 +1076,52 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
                          <div className="w-full md:w-[380px] bg-[var(--lux-card)] border-t md:border-t-0 md:border-l border-[var(--lux-border)] flex flex-col">
                             <div className="md:flex-1 md:overflow-y-auto p-6 md:p-8 space-y-8 custom-scrollbar">
                                <div className="space-y-6">
-                                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--lux-text-muted)]">Financial History</p>
+                                                                                                      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--lux-text-muted)]">Financial History</p>
                                   
                                   <div className="bg-[var(--lux-card)] rounded-3xl p-6 border border-[var(--lux-border)] space-y-4 shadow-xl">
                                      <div className="flex justify-between items-center text-sm font-bold">
                                         <span className="text-[var(--lux-text-muted)]">Room Charges:</span>
-                                        <span className="text-[var(--lux-text)] font-semibold">₹{financials.total - financials.extrasTotal}</span>
+                                        <span className="text-[var(--lux-text)] font-semibold">₹{financials.total - financials.extrasTotal - (Number(liveSelectedRoom.booking.gstAmount) || 0)}</span>
                                      </div>
                                      <div className="flex justify-between items-center text-sm font-bold">
                                         <span className="text-[var(--lux-text-muted)]">Extras Hub:</span>
                                         <span className="text-[var(--lux-text)] font-semibold">₹{financials.extrasTotal}</span>
+                                     </div>
+                                     <div className="flex justify-between items-center text-sm font-bold">
+                                        <div className="flex flex-col">
+                                           <span className="text-[var(--lux-text-muted)] text-[10px]">Tax (GST 5%):</span>
+                                           <div className="flex items-center gap-2 mt-1.5">
+                                              <button 
+                                                type="button"
+                                                onClick={() => liveSelectedRoom.booking.invoiceType !== 'gst' && handleApplyGST(true)}
+                                                className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${liveSelectedRoom.booking.invoiceType === 'gst' ? 'bg-[var(--lux-gold)] text-black shadow-[0_0_15px_rgba(212,175,55,0.3)] scale-105' : 'bg-[var(--lux-soft)] text-[var(--lux-text-muted)] border border-[var(--lux-border)] opacity-60 hover:opacity-100'}`}
+                                              >
+                                                Yes
+                                              </button>
+                                              <button 
+                                                type="button"
+                                                onClick={() => liveSelectedRoom.booking.invoiceType === 'gst' && handleApplyGST(false)}
+                                                className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${liveSelectedRoom.booking.invoiceType !== 'gst' ? 'bg-red-500/20 text-red-500 border border-red-500/30 font-bold scale-105' : 'bg-[var(--lux-soft)] text-[var(--lux-text-muted)] border border-[var(--lux-border)] opacity-60 hover:opacity-100'}`}
+                                              >
+                                                No
+                                              </button>
+                                           </div>
+                                        </div>
+                                        <div className="text-right">
+                                           <span className={`${liveSelectedRoom.booking.invoiceType === 'gst' ? 'text-[var(--lux-gold)]' : 'text-[var(--lux-text-muted)]'} font-display font-bold text-2xl block`}>
+                                              ₹{Number(liveSelectedRoom.booking.gstAmount) || 0}
+                                           </span>
+                                        </div>
                                      </div>
                                      <div className="h-px bg-[var(--lux-border)] my-2"></div>
                                      <div className="flex justify-between items-center">
                                         <span className="text-[11px] font-black uppercase tracking-widest text-[var(--lux-text-muted)]">Gross Invoice</span>
                                         <span className="text-3xl font-display font-bold text-[var(--lux-gold)]">₹{financials.total}</span>
                                      </div>
-                                  </div>
-                               </div>
+                                                                     </div>
+                                </div>
 
-                               <div className="space-y-6">
+                                <div className="space-y-6">
                                   <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--lux-text-muted)]">Collection Dashboard</p>
                                   <div className="bg-[var(--lux-card)] rounded-3xl p-8 border border-[var(--lux-border)] space-y-8 relative overflow-hidden group shadow-xl">
                                      <div className="absolute inset-0 bg-gradient-to-br from-[var(--lux-gold)]/[0.02] to-transparent"></div>
@@ -1168,6 +1237,28 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
                                  <input 
                                     type="email" value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)}
                                     placeholder="guest@example.com"
+                                    className="premium-input"
+                                 />
+                              </div>
+
+                              <div className="premium-input-container md:col-span-2">
+                                 <label className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--lux-gold)] ml-1 opacity-80">
+                                    <Brush size={12} className="text-[var(--lux-gold)]" /> Guest Address
+                                 </label>
+                                 <input 
+                                    type="text" value={guestAddress} onChange={(e) => setGuestAddress(e.target.value)}
+                                    placeholder="Enter customer full address..."
+                                    className="premium-input"
+                                 />
+                              </div>
+
+                              <div className="premium-input-container md:col-span-2">
+                                 <label className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--lux-gold)] ml-1 opacity-80">
+                                    <Receipt size={12} className="text-[var(--lux-gold)]" /> Customer GST No (Optional)
+                                 </label>
+                                 <input 
+                                    type="text" value={guestGstNo} onChange={(e) => setGuestGstNo(e.target.value)}
+                                    placeholder="Enter GST number..."
                                     className="premium-input"
                                  />
                               </div>

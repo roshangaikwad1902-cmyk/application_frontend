@@ -194,6 +194,7 @@
     @apply selection:bg-[var(--lux-gold)] selection:text-black;
     font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
+    touch-action: manipulation; /* Prevents double-tap to zoom on iOS */
   }
 
   h1, h2, h3, h4, h5, h6 {

@@ -57,7 +57,7 @@ export const ReceptionConsole = ({ activeHotelId, onHotelChange }: { activeHotel
   const [searchTerm, setSearchTerm] = useState('');
   
   const [formData, setFormData] = useState({ 
-    name: '', phone: '', email: '', guests: 1,
+    name: '', phone: '', email: '', address: '', guests: 1,
     roomNumber: '', roomType: '', hotelName: '',
     checkin: getLocalDateStr(),
     checkout: getLocalDateStr(1),
@@ -117,6 +117,7 @@ export const ReceptionConsole = ({ activeHotelId, onHotelChange }: { activeHotel
           ...prev, 
           name: pastBooking.guestDetails?.name || prev.name,
           email: pastBooking.guestDetails?.email || prev.email,
+          address: pastBooking.guestDetails?.address || prev.address,
           bookingSource: pastBooking.bookingSource || 'walk_in',
           bookingPlatform: pastBooking.bookingPlatform || '',
           otaPaymentType: pastBooking.otaPaymentType || 'pay_at_hotel'
@@ -269,6 +270,9 @@ export const ReceptionConsole = ({ activeHotelId, onHotelChange }: { activeHotel
                    </div>
                    <NormalInput label="Full Name" value={formData.name} onChange={(v: string) => setFormData({...formData, name: v})} required placeholder="John Doe" />
                    <NormalInput label="Phone Number" value={formData.phone} onChange={(v: string) => setFormData({...formData, phone: v})} required placeholder="+91..." />
+                   <div className="md:col-span-2">
+                      <NormalInput label="Full Address" value={formData.address} onChange={(v: string) => setFormData({...formData, address: v})} placeholder="Enter street, city, state, pin..." />
+                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

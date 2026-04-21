@@ -7,19 +7,15 @@ export const DetailedInvoice = ({ booking, hotel }: { booking: any, hotel: any }
   const isGST = booking.invoiceType === 'gst';
   const financials = getBookingFinancials(booking);
   
-  // Custom GST / Non-GST logic
-  const grossRoom = financials.roomTotal;
+  // Custom GST / Non-GST logic (Exclusive GST per User Request)
+  const roomBase = financials.roomTotal;
   const grossExtras = financials.extrasTotal;
-  const totalGross = grossRoom + grossExtras;
-  
-  const totalTax = isGST ? (booking.gstAmount || (totalGross - (totalGross / 1.05))) : 0;
-  const taxableAmount = totalGross - totalTax;
+  const totalTax = isGST ? (booking.gstAmount || (roomBase * 0.05)) : 0;
   
   const sgst = totalTax / 2;
   const cgst = totalTax / 2;
   
-  const roomBase = isGST ? (grossRoom / 1.05) : grossRoom;
-  const totalCharges = totalGross;
+  const totalCharges = roomBase + grossExtras + totalTax;
 
   return (
     <div className="a4-page p-10 bg-white text-black font-sans text-[10px] leading-relaxed relative">
@@ -46,11 +42,11 @@ export const DetailedInvoice = ({ booking, hotel }: { booking: any, hotel: any }
         <div className="grid grid-cols-[100px_10px_1fr] items-center">
             <span className="font-bold">Folio No.</span><span>:</span><span>{booking._id?.slice(-4).toUpperCase()}</span>
             <span className="font-bold">Invoice No</span><span>:</span><span>{booking._id?.slice(-4).toUpperCase()}</span>
-            <span className="font-bold">Guest Name</span><span>:</span><span className="capitalize">{booking.guestDetails?.name}</span>
-            <span className="font-bold">Bill To</span><span>:</span><span className="capitalize">{booking.guestDetails?.name}</span>
-            <span className="font-bold">Bill To Address</span><span>:</span><span></span>
+            <span className="font-bold">Guest Name</span><span>:</span><span className="capitalize font-semibold">{booking.guestDetails?.name || 'In-House Guest'}</span>
+            <span className="font-bold">Bill To</span><span>:</span><span className="capitalize font-semibold">{booking.guestDetails?.name || 'In-House Guest'}</span>
+            <span className="font-bold">Bill To Address</span><span>:</span><span className="max-w-[200px] break-words">{booking.guestDetails?.address || 'N/A'}</span>
             <span className="font-bold">State</span><span>:</span><span>Maharashtra</span>
-            <span className="font-bold">Bill To GSTIN No</span><span>:</span><span></span>
+            <span className="font-bold">TgstTIN No </span><span>:</span><span>{booking.guestDetails?.guestGstNo || ''}</span>
             <span className="font-bold">Source</span><span>:</span><span className="uppercase">{booking.bookingSource === 'ota' ? booking.bookingPlatform : 'Walk In'}</span>
             <span className="font-bold">Source Of Supply</span><span>:</span><span>Nashik</span>
         </div>

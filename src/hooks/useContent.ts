@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL } from '../config/constants';
 
 const API_URL = `${API_BASE_URL}/api/content`;
 

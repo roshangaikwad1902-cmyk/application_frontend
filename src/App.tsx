@@ -20,8 +20,10 @@ import { BookingsManagement } from './pages/BookingsPage';
 import { GuestsPage } from './pages/GuestsPage';
 import { FutureBookingPage } from './pages/FutureBookingPage';
 import { RevenuePage } from './pages/RevenuePage';
+import { SettingsPage } from './pages/SettingsPage';
 // Views
 import { DetailedInvoice } from './views/DetailedInvoice';
+import { triggerHaptic } from './utils/haptics';
 import { BookingReportView } from './views/BookingReportView';
 import { RevenueReportView } from './views/RevenueReportView';
 import { BookingSlip } from './views/BookingSlip';
@@ -67,6 +69,7 @@ const AppContent = () => {
   };
 
   const handlePrint = (type: 'invoice' | 'report') => {
+    triggerHaptic('medium');
     setTimeout(() => {
       window.print();
       if (type === 'invoice') setInvoiceBooking(null);
@@ -87,8 +90,24 @@ const AppContent = () => {
      <div className="print-view-wrapper">
         <DetailedInvoice booking={invoiceBooking} hotel={activeHotel} />
         <div className="fixed bottom-10 right-10 flex gap-4 no-print z-[1000]">
-           <button onClick={() => setInvoiceBooking(null)} className="px-8 py-4 bg-gray-400 text-white rounded-xl font-bold uppercase text-[10px] shadow-xl hover:bg-gray-500 transition-all">Cancel</button>
-           <button onClick={() => window.print()} className="px-8 py-4 bg-[var(--lux-gold)] text-black rounded-xl font-bold uppercase text-[10px] shadow-xl hover:scale-105 transition-all">Print Invoice</button>
+           {navigator.share && (
+             <button 
+               onClick={async () => {
+                 triggerHaptic('success');
+                 try {
+                   await navigator.share({
+                     title: `Hotel Invoice - ${invoiceBooking.guestDetails?.name || 'Guest'}`,
+                     text: `Hotel Heaven Digital Receipt\n\nGuest: ${invoiceBooking.guestDetails?.name || 'Guest'}\nRoom: ${invoiceBooking.roomNumber}\nTotal Paid: ₹${invoiceBooking.paymentDetails?.paidAmount || 0}\nBalance Due: ₹${Math.max(0, (invoiceBooking.paymentDetails?.totalAmount || 0) - (invoiceBooking.paymentDetails?.paidAmount || 0))}\nDates: ${new Date(invoiceBooking.checkin).toLocaleDateString()} to ${new Date(invoiceBooking.checkout).toLocaleDateString()}\n\nThank you for staying with us!`,
+                   });
+                 } catch (err) { console.log('Share canceled', err); }
+               }} 
+               className="px-8 py-4 bg-green-500 text-white rounded-xl font-bold uppercase text-[10px] shadow-xl hover:scale-105 transition-all flex items-center gap-2"
+             >
+               Share Digital Receipt
+             </button>
+           )}
+           <button onClick={() => { triggerHaptic('light'); setInvoiceBooking(null); }} className="px-8 py-4 bg-gray-400 text-white rounded-xl font-bold uppercase text-[10px] shadow-xl hover:bg-gray-500 transition-all">Cancel</button>
+           <button onClick={() => { triggerHaptic('medium'); window.print(); }} className="px-8 py-4 bg-[var(--lux-gold)] text-black rounded-xl font-bold uppercase text-[10px] shadow-xl hover:scale-105 transition-all">Print Invoice</button>
         </div>
      </div>
   );
@@ -165,6 +184,7 @@ const AppContent = () => {
                  path="/payments" 
                  element={<RevenuePage activeHotelId={activeHotel.id} onReportClick={(data: any) => setRevenueReportData(data)} />} 
                />
+              <Route path="/settings" element={<SettingsPage activeHotelId={activeHotel.id} />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </AnimatePresence>

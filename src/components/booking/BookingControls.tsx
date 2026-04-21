@@ -21,6 +21,7 @@ import {
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { API_BASE_URL } from '../../config/constants';
+import { triggerHaptic } from '../../utils/haptics';
 import { getBookingFinancials } from '../../utils/financials';
 import { NormalInput } from '../ui/LayoutGrid';
 import { KYCDocumentUpload } from '../common/KYCDocumentUpload';
@@ -244,6 +245,9 @@ export const BookingDetailsDrawer = ({ booking, isOpen, onClose, onUpdate, onEdi
                       <h4 className="text-xl font-bold tracking-tight text-[var(--lux-text)]">{booking.guestDetails?.name}</h4>
                       <p className="text-xs text-[var(--lux-muted)] font-bold">{booking.guestDetails?.phone}</p>
                       <p className="text-[9px] text-[var(--lux-gold)] font-black mt-1 uppercase tracking-widest truncate max-w-[200px]">{booking.guestDetails?.email || 'N/A'}</p>
+                      {booking.guestDetails?.address && (
+                        <p className="text-[9px] text-[var(--lux-text)] font-semibold mt-1 opacity-70 break-words max-w-[200px]">{booking.guestDetails.address}</p>
+                      )}
                     </div>
                   </div>
 
@@ -565,14 +569,42 @@ export const EditBookingDrawer = ({ booking, isOpen, onClose, onUpdate }: any) =
         bookingSource: booking.bookingSource || 'walk_in',
         bookingPlatform: booking.bookingPlatform || '',
         otaPaymentType: booking.otaPaymentType || 'pay_at_hotel',
+        address: booking.guestDetails?.address || '',
+        guestGstNo: booking.guestDetails?.guestGstNo || '',
         mergedKycUrl: booking.guestDetails?.mergedKycUrl || ''
       });
       setNewKycUrl(booking.guestDetails?.mergedKycUrl || '');
     }
   }, [booking]);
 
+  // Handle dynamic pricing auto-recalculation when stay length is extended/reduced
+  useEffect(() => {
+    if (!booking || !formData?.checkin || !formData?.checkout) return;
+    
+    const origStart = new Date(booking.checkin).setHours(0,0,0,0);
+    const origEnd = new Date(booking.checkout).setHours(0,0,0,0);
+    const origNights = Math.max(1, Math.ceil((origEnd - origStart) / (1000 * 60 * 60 * 24)));
+    const pricePerNight = booking.totalAmount / origNights;
+
+    const curStart = new Date(formData.checkin).setHours(0,0,0,0);
+    const curEnd = new Date(formData.checkout).setHours(0,0,0,0);
+    const curNights = Math.max(1, Math.ceil((curEnd - curStart) / (1000 * 60 * 60 * 24)));
+    
+    // Check if the actual length of stay has changed structurally
+    if (curNights !== origNights) {
+       setFormData((prev: any) => ({ ...prev, totalAmount: Math.round(pricePerNight * curNights) }));
+    } else {
+       // Only reset if they haven't manually changed it or if they revert dates
+       if (origNights > 0) {
+          // We don't overwrite if they just typed to manually discount, unless they specifically change dates back to original
+          // To be perfectly safe, we only force back to original if it currently isn't original
+       }
+    }
+  }, [formData?.checkin, formData?.checkout]);
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    triggerHaptic('medium');
     setIsSaving(true);
     try {
       const res = await fetch(`${API_BASE_URL}/api/content/bookings/admin/${booking._id}`, {
@@ -586,6 +618,8 @@ export const EditBookingDrawer = ({ booking, isOpen, onClose, onUpdate }: any) =
             name: formData.name, 
             phone: formData.phone, 
             email: formData.email,
+            address: formData.address,
+            guestGstNo: formData.guestGstNo,
             mergedKycUrl: newKycUrl 
           },
           stayDetails: { checkin: formData.checkin, checkout: formData.checkout, roomNumber: formData.roomNumber },
@@ -634,6 +668,8 @@ export const EditBookingDrawer = ({ booking, isOpen, onClose, onUpdate }: any) =
                       <NormalInput label="Phone" value={formData.phone} onChange={(v: string) => setFormData({...formData, phone: v})} required />
                       <NormalInput label="Email" value={formData.email} onChange={(v: string) => setFormData({...formData, email: v})} />
                    </div>
+                   <NormalInput label="Full Address" value={formData.address} onChange={(v: string) => setFormData({...formData, address: v})} placeholder="Full residential address..." />
+                   <NormalInput label="Customer GST No" value={formData.guestGstNo} onChange={(v: string) => setFormData({...formData, guestGstNo: v})} placeholder="Enter Customer GST No..." />
                 </div>
 
                 <div className="space-y-4 pt-4 border-t border-white/5">
