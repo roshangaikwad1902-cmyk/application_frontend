@@ -13,20 +13,33 @@ const ReceptionConsole = ({ activeHotelId, onHotelChange }: { activeHotelId: str
 
   const rooms = useMemo(() => {
     if (!activeHotel) return [];
-    let generated: any[] = [];
-    activeHotel.rooms.forEach((roomType: any) => {
-      if (roomType.numbers) {
-        roomType.numbers.forEach((num: string) => {
-          const booking = unifiedBookings.find((b: any) => b.roomNumber === num);
-          const manualStatus = physicalStatuses.find((s: any) => s.roomNumber === num);
-          generated.push({
-            number: num,
-            type: roomType.type,
-            price: roomType.price,
-            status: manualStatus?.status || (booking ? 'Booked' : 'Available')
-          });
-        });
+    const generated: any[] = [];
+    activeHotel.rooms.forEach((roomType: any, idx: number) => {
+      const count = Number(roomType.total_rooms) || 0;
+      const startNum = (idx + 1) * 100 + 1;
+      
+      let numbers = roomType.numbers && roomType.numbers.length > 0 ? [...roomType.numbers] : [];
+      if (numbers.length > count) numbers = numbers.slice(0, count);
+      while (numbers.length < count) {
+        const nextNum = (startNum + numbers.length).toString();
+        if (!numbers.includes(nextNum)) numbers.push(nextNum);
+        else {
+          let offset = 1;
+          while(numbers.includes((startNum + numbers.length + offset).toString())) offset++;
+          numbers.push((startNum + numbers.length + offset).toString());
+        }
       }
+
+      numbers.forEach((num: string) => {
+        const booking = unifiedBookings.find((b: any) => b.roomNumber === num);
+        const manualStatus = physicalStatuses.find((s: any) => s.roomNumber === num);
+        generated.push({
+          number: num,
+          type: roomType.type,
+          price: roomType.price,
+          status: manualStatus?.status || (booking ? 'Booked' : 'Available')
+        });
+      });
     });
     return generated;
   }, [activeHotel, unifiedBookings, physicalStatuses]);

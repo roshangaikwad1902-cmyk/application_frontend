@@ -253,9 +253,20 @@ export const GlobalDashboard = ({ activeHotelId, onHotelChange, onWalkInClick, o
   
       const generated: any[] = [];
       activeHotel.rooms.forEach((roomType: any, idx: number) => {
-        const count = roomType.total_rooms || 10;
+        const count = Number(roomType.total_rooms) || 0;
         const startNum = (idx + 1) * 100 + 1;
-        const numbers = roomType.numbers && roomType.numbers.length > 0 ? roomType.numbers : Array.from({ length: count }, (_, i) => (startNum + i).toString());
+        
+        let numbers = roomType.numbers && roomType.numbers.length > 0 ? [...roomType.numbers] : [];
+        if (numbers.length > count) numbers = numbers.slice(0, count);
+        while (numbers.length < count) {
+          const nextNum = (startNum + numbers.length).toString();
+          if (!numbers.includes(nextNum)) numbers.push(nextNum);
+          else {
+            let offset = 1;
+            while(numbers.includes((startNum + numbers.length + offset).toString())) offset++;
+            numbers.push((startNum + numbers.length + offset).toString());
+          }
+        }
   
         numbers.forEach((num: string) => {
           const roomStr = String(num);

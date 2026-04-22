@@ -74,15 +74,27 @@ export const ReceptionConsole = ({ activeHotelId, onHotelChange }: { activeHotel
     if (!activeHotel) return [];
     const generated: any[] = [];
     activeHotel.rooms.forEach((roomType: any, idx: number) => {
-      const count = roomType.total_rooms || 20; 
+      const count = Number(roomType.total_rooms) || 0;
       const startNum = (idx + 1) * 100 + 1;
-      for (let i = 0; i < count; i++) {
-        const num = (startNum + i).toString();
+      
+      let numbers = roomType.numbers && roomType.numbers.length > 0 ? [...roomType.numbers] : [];
+      if (numbers.length > count) numbers = numbers.slice(0, count);
+      while (numbers.length < count) {
+        const nextNum = (startNum + numbers.length).toString();
+        if (!numbers.includes(nextNum)) numbers.push(nextNum);
+        else {
+          let offset = 1;
+          while(numbers.includes((startNum + numbers.length + offset).toString())) offset++;
+          numbers.push((startNum + numbers.length + offset).toString());
+        }
+      }
+
+      numbers.forEach((num: string) => {
         const curBooking = activeBookings.find((b: any) => b.roomNumber === num);
         const manStatus = physicalStatuses.find((s: any) => s.roomNumber === num);
         const status = curBooking ? 'Booked' : (manStatus?.status || 'Available');
         generated.push({ number: num, type: roomType.type, price: roomType.price, status });
-      }
+      });
     });
     return generated;
   }, [activeHotel, activeBookings, physicalStatuses]);
